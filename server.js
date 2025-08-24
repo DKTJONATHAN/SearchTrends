@@ -38,141 +38,131 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// Scrape Google Trends using RSS feed method (most reliable)
-async function scrapeGoogleTrendsRSS(region = 'KE') {
+// Function to scrape Google Trends directly (from working version)
+async function scrapeTrends(countryCode, countryName) {
     try {
-        const url = `https://trends.google.com/trends/trendingsearches/daily/rss?geo=${region}`;
-        const response = await axios.get(url, {
-            timeout: 10000,
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': 'application/rss+xml, application/xml, text/xml',
-                'Accept-Language': 'en-US,en;q=0.9'
-            }
-        });
+        logger.info(`Scraping trends for ${countryName}...`);
         
-        const xml = response.data;
+        const headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate',
+            'Connection': 'keep-alive'
+        };
+
+        // Google Trends daily trends URL
+        const url = `https://trends.google.com/trends/trendingsearches/daily?geo=${countryCode}`;
+        
+        const response = await axios.get(url, { 
+            headers,
+            timeout: 15000,
+            maxRedirects: 5
+        });
+
+        const html = response.data;
+        const $ = cheerio.load(html);
+        
+        // Try to extract trending searches from the page
         const trends = [];
         
-        // Parse XML manually to extract trending search terms
-        const $ = cheerio.load(xml, { xmlMode: true });
+        // Look for different possible selectors where trends might be
+        const selectors = [
+            '.trending-searches-item .title',
+            '.trending-search .title', 
+            '[data-ved] .title',
+            '.trending-searches .title',
+            '.search-item .title',
+            'h3',
+            '.title'
+        ];
+
+        for (const selector of selectors) {
+            $(selector).each((i, element) => {
+                const text = $(element).text().trim();
+                if (text && text.length > 0 && text.length < 100) {
+                    trends.push(text);
+                }
+            });
+            
+            if (trends.length > 0) break;
+        }
+
+        // Remove duplicates and limit to 10
+        const uniqueTrends = [...new Set(trends)].slice(0, 10);
         
-        // Extract from title elements
+        if (uniqueTrends.length > 0) {
+            logger.info(`Found ${uniqueTrends.length} trends for ${countryName}`);
+            return uniqueTrends;
+        }
+
+        logger.warn(`No trends found in HTML for ${countryName}`);
+        return [];
+
+    } catch (error) {
+        logger.error(`Scraping failed for ${countryName}: ${error.message}`);
+        return [];
+    }
+}
+
+// Alternative: Use RSS feeds from Google News (more reliable)
+async function getNewsTopics(countryCode, countryName) {
+    try {
+        logger.info(`Getting news topics for ${countryName}...`);
+        
+        const headers = {
+            'User-Agent': 'Mozilla/5.0 (compatible; TrendScope/1.0)',
+            'Accept': 'application/rss+xml, application/xml, text/xml'
+        };
+
+        // Google News RSS URLs for different countries
+        const rssUrls = {
+            'KE': 'https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRFZxYUdjU0FtVnVHZ0pMUlNnQVAB?hl=en-KE&gl=KE&ceid=KE:en',
+            'US': 'https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRFZxYUdjU0FtVnVHZ0pWVXlnQVAB?hl=en-US&gl=US&ceid=US:en',
+            'GB': 'https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRFZxYUdjU0FtVnVHZ0pIVWlnQVAB?hl=en-GB&gl=GB&ceid=GB:en'
+        };
+
+        const url = rssUrls[countryCode];
+        if (!url) return [];
+
+        const response = await axios.get(url, { 
+            headers,
+            timeout: 10000
+        });
+
+        const $ = cheerio.load(response.data, { xmlMode: true });
+        const topics = [];
+
         $('item title').each((i, element) => {
             const title = $(element).text().trim();
-            if (title && 
-                title !== 'Daily Search Trends' && 
-                !title.includes('Trending searches') &&
-                title.length > 2 && 
-                title.length < 60 &&
-                !trends.includes(title)) {
-                trends.push(title);
+            if (title && i < 10) {
+                // Extract main topic/keyword from news title
+                const cleanTitle = title
+                    .replace(/\s*-\s*.+$/, '') // Remove " - Source" 
+                    .replace(/^\w+:\s*/, '') // Remove "Breaking:" etc
+                    .trim();
+                
+                if (cleanTitle.length > 5 && cleanTitle.length < 60) {
+                    topics.push(cleanTitle);
+                }
             }
         });
-        
-        // Also try CDATA extraction
-        const cdataRegex = /<!\[CDATA\[(.*?)\]\]>/g;
-        let match;
-        while ((match = cdataRegex.exec(xml)) !== null) {
-            const text = match[1].trim();
-            if (text && 
-                text !== 'Daily Search Trends' &&
-                !text.includes('Trending searches') &&
-                text.length > 2 && 
-                text.length < 60 &&
-                !trends.includes(text)) {
-                trends.push(text);
-            }
+
+        if (topics.length > 0) {
+            logger.info(`Found ${topics.length} news topics for ${countryName}`);
+            return topics;
         }
 
-        logger.info(`Google Trends RSS ${region}: ${trends.length} trends extracted`);
-        return trends.slice(0, 10);
+        return [];
 
     } catch (error) {
-        logger.error(`Google Trends RSS failed for ${region}: ${error.message}`);
+        logger.error(`News topics failed for ${countryName}: ${error.message}`);
         return [];
     }
 }
 
-// Alternative Google Trends method using trending searches endpoint
-async function scrapeGoogleTrendsAPI(region = 'KE') {
-    try {
-        // This mimics the internal API that Google Trends uses
-        const url = `https://trends.google.com/trends/api/dailytrends?hl=en&tz=-180&geo=${region}&ns=15`;
-        
-        const response = await axios.get(url, {
-            timeout: 10000,
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': 'application/json',
-                'Referer': 'https://trends.google.com/',
-                'Accept-Language': 'en-US,en;q=0.9'
-            }
-        });
-        
-        // Google returns data with )]}' prefix, remove it
-        let jsonData = response.data;
-        if (typeof jsonData === 'string' && jsonData.startsWith(')]}\'')) {
-            jsonData = jsonData.substring(4);
-        }
-        
-        const data = JSON.parse(jsonData);
-        const trends = [];
-        
-        if (data.default && data.default.trendingSearchesDays) {
-            const todayTrends = data.default.trendingSearchesDays[0];
-            if (todayTrends && todayTrends.trendingSearches) {
-                todayTrends.trendingSearches.forEach(trend => {
-                    if (trend.title && trend.title.query) {
-                        trends.push(trend.title.query);
-                    }
-                });
-            }
-        }
-
-        logger.info(`Google Trends API ${region}: ${trends.length} trends extracted`);
-        return trends.slice(0, 10);
-
-    } catch (error) {
-        logger.error(`Google Trends API failed for ${region}: ${error.message}`);
-        return [];
-    }
-}
-
-// Fetch RSS feeds from various sources
-async function fetchRSSFeed(url, feedName) {
-    try {
-        const response = await axios.get(url, {
-            timeout: 8000,
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (compatible; TrendScope/1.0; +https://trendscope.com/bot)',
-                'Accept': 'application/rss+xml, application/xml, text/xml'
-            }
-        });
-        
-        const xml = response.data;
-        const $ = cheerio.load(xml, { xmlMode: true });
-        const trends = [];
-        
-        // Extract titles from RSS feeds
-        $('item title, entry title').each((i, element) => {
-            const title = $(element).text().trim();
-            if (title && title.length > 5 && title.length < 100 && !trends.includes(title)) {
-                trends.push(title);
-            }
-        });
-
-        logger.info(`RSS ${feedName}: ${trends.length} items fetched`);
-        return trends.slice(0, 10);
-
-    } catch (error) {
-        logger.error(`RSS feed ${feedName} failed: ${error.message}`);
-        return [];
-    }
-}
-
-// Fetch NewsAPI topics (no fallbacks)
-async function getNewsTopics(category, categoryName) {
+// Fetch NewsAPI topics (no fallbacks) - UNCHANGED
+async function getNewsAPITopics(category, categoryName) {
     try {
         const apiKey = process.env.NEWSAPI_KEY;
         if (!apiKey) {
@@ -212,18 +202,50 @@ async function getNewsTopics(category, categoryName) {
     }
 }
 
+// Fetch RSS feeds from various sources
+async function fetchRSSFeed(url, feedName) {
+    try {
+        const response = await axios.get(url, {
+            timeout: 8000,
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (compatible; TrendScope/1.0)',
+                'Accept': 'application/rss+xml, application/xml, text/xml'
+            }
+        });
+        
+        const xml = response.data;
+        const $ = cheerio.load(xml, { xmlMode: true });
+        const trends = [];
+        
+        // Extract titles from RSS feeds
+        $('item title, entry title').each((i, element) => {
+            const title = $(element).text().trim();
+            if (title && title.length > 5 && title.length < 100 && !trends.includes(title)) {
+                trends.push(title);
+            }
+        });
+
+        logger.info(`RSS ${feedName}: ${trends.length} items fetched`);
+        return trends.slice(0, 10);
+
+    } catch (error) {
+        logger.error(`RSS feed ${feedName} failed: ${error.message}`);
+        return [];
+    }
+}
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
     try {
         res.status(200).json({
             success: true,
-            message: 'TrendScope server running - Real data only',
+            message: 'TrendScope server - Live data only',
             timestamp: new Date().toISOString(),
             environment: process.env.NODE_ENV || 'development',
             data_sources: {
+                google_trends: 'Direct scraping + Google News RSS',
                 news: 'NewsAPI',
-                google_trends: 'Google Trends RSS + Internal API',
-                rss_feeds: 'Direct RSS parsing'
+                rss: 'Various RSS feeds'
             },
             policy: 'No fallbacks - real data or empty results'
         });
@@ -249,51 +271,55 @@ app.get('/api/trends', async (req, res) => {
         logger.info('Fetching fresh trends - no fallbacks...');
 
         const categories = [
-            { key: 'kenya', region: 'KE', name: 'Kenya Google Trends', type: 'pytrends' },
-            { key: 'worldwide', region: 'US', name: 'Worldwide Google Trends', type: 'pytrends' },
-            { key: 'googletrends', region: 'US', name: 'Google Trends', type: 'pytrends' },
-            { key: 'news', code: 'general', name: 'News', type: 'news' },
-            { key: 'technology', code: 'technology', name: 'Technology', type: 'news' },
-            { key: 'entertainment', code: 'entertainment', name: 'Entertainment', type: 'news' },
-            { key: 'sports', code: 'sports', name: 'Sports', type: 'news' },
+            { key: 'kenya', code: 'KE', name: 'Kenya', type: 'google_trends' },
+            { key: 'worldwide', code: 'US', name: 'Worldwide', type: 'google_news' },
+            { key: 'googletrends', code: 'GB', name: 'Google Trends', type: 'google_news' },
+            { key: 'news', code: 'general', name: 'News', type: 'newsapi' },
+            { key: 'technology', code: 'technology', name: 'Technology', type: 'newsapi' },
+            { key: 'entertainment', code: 'entertainment', name: 'Entertainment', type: 'newsapi' },
+            { key: 'sports', code: 'sports', name: 'Sports', type: 'newsapi' },
             { key: 'lifestyle', url: 'https://feeds.bbci.co.uk/news/health/rss.xml', name: 'BBC Health RSS', type: 'rss' },
-            { key: 'business', code: 'business', name: 'Business', type: 'news' },
+            { key: 'business', code: 'business', name: 'Business', type: 'newsapi' },
             { key: 'health', url: 'https://rss.cnn.com/rss/edition.rss', name: 'CNN RSS', type: 'rss' },
             { key: 'science', url: 'https://feeds.bbci.co.uk/news/science_and_environment/rss.xml', name: 'BBC Science RSS', type: 'rss' },
             { key: 'fashion', url: 'https://www.wired.com/feed/rss', name: 'Wired RSS', type: 'rss' }
         ];
 
         const results = {};
-        const fetchPromises = categories.map(async (category) => {
+        
+        for (const category of categories) {
             try {
                 let trends = [];
                 
-                if (category.type === 'pytrends') {
-                    trends = await getGoogleTrendsFromPython(category.region);
-                } else if (category.type === 'news') {
+                if (category.type === 'google_trends') {
+                    trends = await scrapeTrends(category.code, category.name);
+                } else if (category.type === 'google_news') {
                     trends = await getNewsTopics(category.code, category.name);
+                } else if (category.type === 'newsapi') {
+                    trends = await getNewsAPITopics(category.code, category.name);
                 } else if (category.type === 'rss') {
                     trends = await fetchRSSFeed(category.url, category.name);
                 }
                 
                 results[category.key] = trends;
                 logger.info(`${category.name}: ${trends.length} items fetched`);
+                
+                // Wait between requests to avoid rate limiting
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
             } catch (error) {
                 logger.error(`${category.name} failed: ${error.message}`);
                 results[category.key] = [];
             }
-        });
-
-        // Wait for all requests
-        await Promise.allSettled(fetchPromises);
+        }
 
         const response = {
             success: true,
             timestamp: new Date().toISOString(),
             cached: false,
             sources_used: {
-                google_trends_rss: ['kenya', 'googletrends'],
-                google_trends_api: ['worldwide'],
+                google_trends_scraping: ['kenya'],
+                google_news_rss: ['worldwide', 'googletrends'],
                 newsapi: ['news', 'technology', 'entertainment', 'sports', 'business'],
                 rss_feeds: ['lifestyle', 'health', 'science', 'fashion']
             },
@@ -373,15 +399,16 @@ app.get('/api/health', (req, res) => {
     try {
         res.status(200).json({
             success: true,
-            message: 'TrendScope server - Live data only',
+            message: 'TrendScope server - Live data with working scraper',
             timestamp: new Date().toISOString(),
             environment: process.env.NODE_ENV || 'development',
             data_sources: {
-                google_trends: 'RSS + Internal API',
+                google_trends: 'Direct scraping (proven method)',
+                google_news: 'RSS feeds',
                 news: 'NewsAPI',
                 rss: 'BBC, CNN, Wired feeds'
             },
-            regions: { kenya: 'KE', worldwide: 'US' },
+            regions: { kenya: 'KE', worldwide: 'US', uk: 'GB' },
             policy: 'Zero fallbacks - live or empty'
         });
     } catch (error) {
@@ -415,7 +442,7 @@ app.use((err, req, res, next) => {
 if (process.env.NODE_ENV !== 'production') {
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {
-        logger.info(`TrendScope server running on port ${PORT} - Live data only`);
+        logger.info(`TrendScope server running on port ${PORT} - Working scraper method`);
     });
 }
 
