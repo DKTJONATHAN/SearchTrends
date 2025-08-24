@@ -1,20 +1,16 @@
 const express = require('express');
 const axios = require('axios');
-const cheerio = require('cheerio');
-const UserAgent = require('user-agents');
 const cors = require('cors');
 const path = require('path');
 const NodeCache = require('node-cache');
 const rateLimit = require('express-rate-limit');
 const winston = require('winston');
 const dotenv = require('dotenv');
-const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-const cache = new NodeCache({ stdTTL: 600 }); // 10 min TTL
+const cache = new NodeCache({ stdTTL: 600 }); // 10-minute cache
 
 // Logger setup
 const logger = winston.createLogger({
@@ -35,13 +31,12 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 app.use(cors());
-app.use(express.static('.')); // Serve static files from root
 app.use(express.json());
 
-// Rate limiting
+// Rate limiting: 100 requests per 15 minutes
 const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100 // 100 requests per IP
+    windowMs: 15 * 60 * 1000,
+    max: 100
 });
 app.use('/api/', limiter);
 
@@ -61,69 +56,18 @@ const mockData = {
     fashion: ['Sustainable Fashion', 'Streetwear', 'Athleisure', 'Vintage Trends', 'Designer Collabs', 'Fashion Week', 'Eco Fabrics', 'Minimalist Style', 'Bold Accessories', 'Cultural Prints']
 };
 
-// Serve HTML
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-// Scrape Google Trends
-async function scrapeTrends(countryCode, categoryName) {
-    try {
-        logger.info(`Scraping trends for ${categoryName}`);
-        const userAgent = new UserAgent();
-        const headers = {
-            'User-Agent': userAgent.toString(),
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5'
-        };
-
-        const url = `https://trends.google.com/trends/trendingsearches/daily?geo=${countryCode || ''}`;
-        const response = await axios.get(url, { headers, timeout: 15000 });
-        const $ = cheerio.load(response.data);
-
-        const trends = [];
-        const selectors = [
-            '.trending-searches-item .title',
-            '.trending-search .title',
-            '[data-ved] .title',
-            '.trending-searches .title',
-            'h3',
-            '.title'
-        ];
-
-        for (const selector of selectors) {
-            $(selector).each((i, element) => {
-                const text = $(element).text().trim();
-                if (text && text.length > 0 && text.length < 100) trends.push(text);
-            });
-            if (trends.length > 0) break;
-        }
-
-        const uniqueTrends = [...new Set(trends)].slice(0, 10);
-        logger.info(`Found ${uniqueTrends.length} trends for ${categoryName}`);
-        return uniqueTrends;
-    } catch (error) {
-        logger.error(`Scraping failed for ${categoryName}: ${error.message}`);
-        return [];
-    }
-}
-
 // Fetch NewsAPI topics
 async function getNewsTopics(category, categoryName) {
     try {
-        logger.info(`Fetching NewsAPI topics for ${categoryName}`);
-        const apiKey = '33579597361b410a9454a9634f3fd8a5';
+        const apiKey = process.env.NEWSAPI_KEY;
+        if (!apiKey) throw new Error('NEWSAPI_KEY not set');
         const response = await axios.get(`https://newsapi.org/v2/top-headlines?category=${category}&language=en&apiKey=${apiKey}`, {
-            timeout: 10000
+            timeout: 5000 // 5-second timeout
         });
-
-        const topics = response.data.articles
+        return response.data.articles
             .map(article => article.title.split(' - ')[0].trim())
             .filter(title => title.length > 5 && title.length < 60)
             .slice(0, 10);
-
-        logger.info(`Found ${topics.length} news topics for ${categoryName}`);
-        return topics;
     } catch (error) {
         logger.error(`NewsAPI failed for ${categoryName}: ${error.message}`);
         return mockData[category] || [];
@@ -133,25 +77,17 @@ async function getNewsTopics(category, categoryName) {
 // Fetch X Trends
 async function getXTrends() {
     try {
-        logger.info('Fetching X Trends');
-        const bearerToken = 'AAAAAAAAAAAAAAAAAAAAAE783gEAAAAAel00S9G0811d2ZF%2ByaSXysMQZb4%3Dvug2Qo7Ym1Su6aCsFJRntheTjL0WwmE7nyjQVzyHDokhyZqII2';
+        const bearerToken = process.env.X_API_BEARER_TOKEN;
+        if (!bearerToken) throw new Error('X_API_BEARER_TOKEN not set');
         const response = await axios.get('https://api.twitter.com/2/trends/place/1', {
             headers: { Authorization: `Bearer ${bearerToken}` },
-            timeout: 10000
+            timeout: 5000
         });
-
-        const trends = response.data.trends
-            .map(trend => ({
-                name: trend.name,
-                tweet_volume: trend.tweet_volume || null
-            }))
-            .filter(trend => trend.name.length > 0)
-            .sort((a, b) => (b.tweet_volume || 0) - (a.tweet_volume || 0))
+        if (!response.data.trends) throw new Error('Invalid X API response');
+        return response.data.trends
             .map(trend => trend.name)
+            .filter(name => name.length > 0)
             .slice(0, 10);
-
-        logger.info(`Found ${trends.length} X Trends`);
-        return trends;
     } catch (error) {
         logger.error(`X Trends failed: ${error.message}`);
         return mockData.xtrends;
@@ -160,17 +96,19 @@ async function getXTrends() {
 
 // API endpoint to get trends
 app.get('/api/trends', async (req, res) => {
+    const timeout = setTimeout(() => {
+        res.status(504).json({ success: false, error: 'Request timed out' });
+    }, 9000); // 9 seconds to stay under 10-second limit
     try {
-        logger.info('Starting trends fetch');
         const cached = cache.get('trends');
         if (cached) {
-            logger.info('Returning cached trends');
+            clearTimeout(timeout);
             return res.json(cached);
         }
 
         const categories = [
-            { key: 'kenya', code: 'KE', name: 'Kenya', type: 'trends' },
-            { key: 'worldwide', code: '', name: 'Worldwide', type: 'trends' },
+            { key: 'kenya', code: 'KE', name: 'Kenya', type: 'mock' }, // Using mock for now
+            { key: 'worldwide', code: '', name: 'Worldwide', type: 'mock' },
             { key: 'xtrends', code: null, name: 'X Trends', type: 'x' },
             { key: 'news', code: 'general', name: 'News', type: 'news' },
             { key: 'technology', code: 'technology', name: 'Technology', type: 'news' },
@@ -184,74 +122,55 @@ app.get('/api/trends', async (req, res) => {
         ];
 
         const results = {};
-        let totalFound = 0;
-
         for (const category of categories) {
-            logger.info(`Processing ${category.name}`);
             let trends = [];
-            if (category.type === 'trends') {
-                trends = await scrapeTrends(category.code, category.name);
+            if (category.type === 'mock') {
+                trends = mockData[category.key] || [];
             } else if (category.type === 'news') {
                 trends = await getNewsTopics(category.code, category.name);
             } else if (category.type === 'x') {
                 trends = await getXTrends();
             }
-
-            if (trends.length === 0) {
-                logger.warn(`No data for ${category.name}, using mock data`);
-                trends = mockData[category.key] || [];
-            }
-
-            results[category.key] = trends;
-            totalFound += trends.length;
-
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            results[category.key] = trends.length ? trends : mockData[category.key] || [];
         }
 
         const response = {
             success: true,
             timestamp: new Date().toISOString(),
-            total_trends: totalFound,
-            method: 'mixed_api_scraping',
             ...results
         };
-
         cache.set('trends', response);
+        clearTimeout(timeout);
         res.json(response);
     } catch (error) {
-        logger.error(`Critical error: ${error.message}`);
-        res.status(500).json({
-            success: false,
-            error: `System error: ${error.message}`
-        });
+        clearTimeout(timeout);
+        logger.error(`Critical error in /api/trends: ${error.message}`);
+        res.status(500).json({ success: false, error: `System error: ${error.message}` });
     }
 });
 
-// Export trends as CSV
+// Export trends as CSV (response-based for Vercel)
 app.get('/api/export', async (req, res) => {
     try {
-        logger.info('Exporting trends as CSV');
         const trends = cache.get('trends') || { success: false, error: 'No trends available' };
         if (!trends.success) {
             return res.status(400).json(trends);
         }
 
         const records = Object.entries(trends)
-            .filter(([key]) => key !== 'success' && key !== 'timestamp' && key !== 'total_trends' && key !== 'method')
+            .filter(([key]) => key !== 'success' && key !== 'timestamp')
             .flatMap(([category, keywords]) =>
                 keywords.map(keyword => ({ category, keyword }))
             );
 
-        const csvWriter = createCsvWriter({
-            path: 'trends_export.csv',
-            header: [
-                { id: 'category', title: 'Category' },
-                { id: 'keyword', title: 'Keyword' }
-            ]
-        });
+        const csv = [
+            'Category,Keyword',
+            ...records.map(record => `${record.category},${record.keyword}`)
+        ].join('\n');
 
-        await csvWriter.writeRecords(records);
-        res.download('trends_export.csv');
+        res.header('Content-Type', 'text/csv');
+        res.attachment('trends_export.csv');
+        res.send(csv);
     } catch (error) {
         logger.error(`Export failed: ${error.message}`);
         res.status(500).json({ success: false, error: `Export failed: ${error.message}` });
@@ -267,6 +186,5 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-app.listen(PORT, () => {
-    logger.info(`🚀 TrendScope Platform running on http://localhost:${PORT}`);
-});
+// Export for Vercel serverless
+module.exports = app;
