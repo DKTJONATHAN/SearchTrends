@@ -8,106 +8,201 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
+        .container { max-width: 100%; overflow-x: hidden; }
+        @media (max-width: 640px) {
+            .container { padding-left: 1rem; padding-right: 1rem; }
+            .trend-card { width: 100%; }
+            h1 { font-size: 2.5rem; }
+        }
     </style>
 </head>
 <body class="min-h-screen bg-black text-white">
     <!-- Toast Notification -->
-    <div id="toast" class="fixed bottom-4 right-4 bg-gray-700 text-white px-4 py-2 rounded shadow hidden"></div>
+    <div id="toast" class="fixed bottom-4 right-4 bg-gray-700 text-white px-4 py-2 rounded shadow hidden z-50"></div>
 
     <!-- Header Section -->
-    <div class="pt-20 pb-16 px-4">
-        <div class="max-w-6xl mx-auto text-center">
-            <!-- Icon -->
+    <div class="pt-16 pb-12 px-4 container mx-auto">
+        <div class="text-center">
             <div class="inline-flex items-center justify-center w-16 h-16 bg-gray-800 rounded-full mb-6">
-                <img src="https://www.svgrepo.com/download/388821/trending-up.svg" alt="Trending Up Icon" class="w-8 h-8 text-gray-300">
+                <img src="https://www.svgrepo.com/download/388821/trending-up.svg" alt="Trending Up Icon" class="w-8 h-8">
             </div>
-
-            <!-- Title -->
-            <h1 class="text-6xl font-bold mb-4 text-white">
-                TrendScope
-            </h1>
-            
-            <!-- Subtitle -->
-            <p class="text-xl text-gray-400 mb-4 max-w-3xl mx-auto">
-                Discover what the world is searching for
+            <h1 class="text-5xl font-bold mb-4 text-white">TrendScope</h1>
+            <p class="text-lg text-gray-400 mb-4 max-w-2xl mx-auto">
+                Uncover trending keywords for viral content
             </p>
-            <p class="text-base text-gray-500 mb-8 max-w-2xl mx-auto">
-                Real-time trending topics from Kenya, US, and UK to fuel your viral content strategy
+            <p class="text-sm text-gray-500 mb-8 max-w-xl mx-auto">
+                Real-time trends across News, Technology, Entertainment, Sports, and more
             </p>
-            
-            <!-- CTA Button -->
-            <button onclick="fetchTrends()" id="fetchBtn" class="px-8 py-4 bg-gray-700 hover:bg-gray-600 text-white rounded-md font-medium transition duration-300">
-                <span class="flex items-center justify-center">
-                    <img src="https://www.svgrepo.com/download/139937/lightning-bolt-black-shape.svg" alt="Lightning Bolt Icon" class="w-5 h-5 mr-2">
-                    Discover Trends
-                </span>
-            </button>
+            <div class="flex justify-center space-x-4">
+                <button onclick="fetchTrends()" id="fetchBtn" class="px-8 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-md font-medium transition duration-300">
+                    <span class="flex items-center justify-center">
+                        <img src="https://www.svgrepo.com/download/139937/lightning-bolt-black-shape.svg" alt="Lightning Bolt Icon" class="w-5 h-5 mr-2">
+                        Discover Trends
+                    </span>
+                </button>
+                <a href="/api/export" download class="px-8 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-md font-medium transition duration-300 flex items-center">
+                    <img src="https://www.svgrepo.com/download/354162/football.svg" alt="Export Icon" class="w-5 h-5 mr-2">
+                    Export CSV
+                </a>
+            </div>
         </div>
     </div>
 
     <!-- Status -->
-    <div class="max-w-4xl mx-auto px-4 mb-12">
+    <div class="container mx-auto px-4 mb-12">
         <div class="bg-gray-800 rounded-md p-4">
-            <p id="status" class="text-center text-gray-300">
-                Ready to explore global trends
+            <p id="status" class="text-center text-gray-300 text-sm">
+                Ready to explore trends
             </p>
         </div>
     </div>
 
     <!-- Trends Grid -->
-    <div class="max-w-6xl mx-auto px-4 pb-20">
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- Kenya Card -->
-            <div class="bg-gray-800 rounded-md overflow-hidden border border-gray-700">
-                <div class="bg-gray-900 p-6 flex items-center justify-between">
+    <div class="container mx-auto px-4 pb-20">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Category Cards -->
+            <div class="trend-card bg-gray-800 rounded-md overflow-hidden border border-gray-700">
+                <div class="bg-gray-900 p-5 flex items-center justify-between">
                     <div>
-                        <h2 class="text-2xl font-semibold text-white mb-1">Kenya</h2>
-                        <p class="text-sm text-gray-400">East Africa's Digital Hub</p>
+                        <h2 class="text-xl font-semibold text-white mb-1">Kenya</h2>
+                        <p class="text-xs text-gray-400">East Africa's Digital Hub</p>
                     </div>
-                    <img src="https://flagcdn.com/144x108/ke.svg" alt="Kenya Flag" class="w-12 h-9">
+                    <img src="https://flagcdn.com/144x108/ke.svg" alt="Kenya Flag" class="w-10 h-7">
                 </div>
-                <div class="p-6">
-                    <div id="kenya" class="space-y-4">
-                        <div class="text-center text-gray-500 py-8">
-                            <p>Discovering trends...</p>
-                        </div>
-                    </div>
+                <div class="p-5">
+                    <div id="kenya" class="space-y-3"></div>
                 </div>
             </div>
-
-            <!-- US Card -->
-            <div class="bg-gray-800 rounded-md overflow-hidden border border-gray-700">
-                <div class="bg-gray-900 p-6 flex items-center justify-between">
+            <div class="trend-card bg-gray-800 rounded-md overflow-hidden border border-gray-700">
+                <div class="bg-gray-900 p-5 flex items-center justify-between">
                     <div>
-                        <h2 class="text-2xl font-semibold text-white mb-1">United States</h2>
-                        <p class="text-sm text-gray-400">Global Trendsetter</p>
+                        <h2 class="text-xl font-semibold text-white mb-1">Worldwide</h2>
+                        <p class="text-xs text-gray-400">Global Hot Topics</p>
                     </div>
-                    <img src="https://flagcdn.com/144x108/us.svg" alt="US Flag" class="w-12 h-9">
+                    <img src="https://www.svgrepo.com/download/513373/rocket.svg" alt="Worldwide Icon" class="w-8 h-8">
                 </div>
-                <div class="p-6">
-                    <div id="us" class="space-y-4">
-                        <div class="text-center text-gray-500 py-8">
-                            <p>Discovering trends...</p>
-                        </div>
-                    </div>
+                <div class="p-5">
+                    <div id="worldwide" class="space-y-3"></div>
                 </div>
             </div>
-
-            <!-- UK Card -->
-            <div class="bg-gray-800 rounded-md overflow-hidden border border-gray-700">
-                <div class="bg-gray-900 p-6 flex items-center justify-between">
+            <div class="trend-card bg-gray-800 rounded-md overflow-hidden border border-gray-700">
+                <div class="bg-gray-900 p-5 flex items-center justify-between">
                     <div>
-                        <h2 class="text-2xl font-semibold text-white mb-1">United Kingdom</h2>
-                        <p class="text-sm text-gray-400">European Influencer</p>
+                        <h2 class="text-xl font-semibold text-white mb-1">X Trends</h2>
+                        <p class="text-xs text-gray-400">What's trending on X</p>
                     </div>
-                    <img src="https://flagcdn.com/144x108/gb.svg" alt="UK Flag" class="w-12 h-9">
+                    <img src="https://www.svgrepo.com/download/353140/twitter.svg" alt="X Icon" class="w-8 h-8">
                 </div>
-                <div class="p-6">
-                    <div id="uk" class="space-y-4">
-                        <div class="text-center text-gray-500 py-8">
-                            <p>Discovering trends...</p>
-                        </div>
+                <div class="p-5">
+                    <div id="xtrends" class="space-y-3"></div>
+                </div>
+            </div>
+            <div class="trend-card bg-gray-800 rounded-md overflow-hidden border border-gray-700">
+                <div class="bg-gray-900 p-5 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-semibold text-white mb-1">News</h2>
+                        <p class="text-xs text-gray-400">Global Headlines</p>
                     </div>
+                    <img src="https://www.svgrepo.com/download/302554/star.svg" alt="News Icon" class="w-8 h-8">
+                </div>
+                <div class="p-5">
+                    <div id="news" class="space-y-3"></div>
+                </div>
+            </div>
+            <div class="trend-card bg-gray-800 rounded-md overflow-hidden border border-gray-700">
+                <div class="bg-gray-900 p-5 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-semibold text-white mb-1">Technology</h2>
+                        <p class="text-xs text-gray-400">Innovations & Gadgets</p>
+                    </div>
+                    <img src="https://www.svgrepo.com/download/381643/flame.svg" alt="Tech Icon" class="w-8 h-8">
+                </div>
+                <div class="p-5">
+                    <div id="technology" class="space-y-3"></div>
+                </div>
+            </div>
+            <div class="trend-card bg-gray-800 rounded-md overflow-hidden border border-gray-700">
+                <div class="bg-gray-900 p-5 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-semibold text-white mb-1">Entertainment</h2>
+                        <p class="text-xs text-gray-400">Movies, Music & More</p>
+                    </div>
+                    <img src="https://www.svgrepo.com/download/354162/football.svg" alt="Entertainment Icon" class="w-8 h-8">
+                </div>
+                <div class="p-5">
+                    <div id="entertainment" class="space-y-3"></div>
+                </div>
+            </div>
+            <div class="trend-card bg-gray-800 rounded-md overflow-hidden border border-gray-700">
+                <div class="bg-gray-900 p-5 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-semibold text-white mb-1">Sports</h2>
+                        <p class="text-xs text-gray-400">Games & Athletes</p>
+                    </div>
+                    <img src="https://www.svgrepo.com/download/354162/football.svg" alt="Sports Icon" class="w-8 h-8">
+                </div>
+                <div class="p-5">
+                    <div id="sports" class="space-y-3"></div>
+                </div>
+            </div>
+            <div class="trend-card bg-gray-800 rounded-md overflow-hidden border border-gray-700">
+                <div class="bg-gray-900 p-5 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-semibold text-white mb-1">Lifestyle</h2>
+                        <p class="text-xs text-gray-400">Trends & Wellness</p>
+                    </div>
+                    <img src="https://www.svgrepo.com/download/513373/rocket.svg" alt="Lifestyle Icon" class="w-8 h-8">
+                </div>
+                <div class="p-5">
+                    <div id="lifestyle" class="space-y-3"></div>
+                </div>
+            </div>
+            <div class="trend-card bg-gray-800 rounded-md overflow-hidden border border-gray-700">
+                <div class="bg-gray-900 p-5 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-semibold text-white mb-1">Business</h2>
+                        <p class="text-xs text-gray-400">Markets & Startups</p>
+                    </div>
+                    <img src="https://www.svgrepo.com/download/302554/star.svg" alt="Business Icon" class="w-8 h-8">
+                </div>
+                <div class="p-5">
+                    <div id="business" class="space-y-3"></div>
+                </div>
+            </div>
+            <div class="trend-card bg-gray-800 rounded-md overflow-hidden border border-gray-700">
+                <div class="bg-gray-900 p-5 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-semibold text-white mb-1">Health</h2>
+                        <p class="text-xs text-gray-400">Wellness & Medicine</p>
+                    </div>
+                    <img src="https://www.svgrepo.com/download/381643/flame.svg" alt="Health Icon" class="w-8 h-8">
+                </div>
+                <div class="p-5">
+                    <div id="health" class="space-y-3"></div>
+                </div>
+            </div>
+            <div class="trend-card bg-gray-800 rounded-md overflow-hidden border border-gray-700">
+                <div class="bg-gray-900 p-5 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-semibold text-white mb-1">Science</h2>
+                        <p class="text-xs text-gray-400">Discoveries & Research</p>
+                    </div>
+                    <img src="https://www.svgrepo.com/download/353140/twitter.svg" alt="Science Icon" class="w-8 h-8">
+                </div>
+                <div class="p-5">
+                    <div id="science" class="space-y-3"></div>
+                </div>
+            </div>
+            <div class="trend-card bg-gray-800 rounded-md overflow-hidden border border-gray-700">
+                <div class="bg-gray-900 p-5 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-semibold text-white mb-1">Fashion</h2>
+                        <p class="text-xs text-gray-400">Style & Trends</p>
+                    </div>
+                    <img src="https://www.svgrepo.com/download/513373/rocket.svg" alt="Fashion Icon" class="w-8 h-8">
+                </div>
+                <div class="p-5">
+                    <div id="fashion" class="space-y-3"></div>
                 </div>
             </div>
         </div>
@@ -115,9 +210,9 @@
 
     <!-- Footer -->
     <div class="text-center py-8 text-gray-500">
-        <div class="max-w-2xl mx-auto px-4">
-            <p class="text-base mb-1">Click any trend to copy it instantly</p>
-            <p class="text-sm">Your gateway to viral content ideas</p>
+        <div class="container mx-auto px-4">
+            <p class="text-sm mb-1">Click any trend to copy keywords instantly</p>
+            <p class="text-xs">Your gateway to viral content ideas</p>
         </div>
     </div>
 
@@ -131,12 +226,11 @@
             btn.innerHTML = `
                 <span class="flex items-center justify-center">
                     <img src="https://www.svgrepo.com/download/139937/lightning-bolt-black-shape.svg" alt="Lightning Bolt Icon" class="w-5 h-5 mr-2 animate-spin">
-                    Analyzing Global Trends...
+                    Analyzing Trends...
                 </span>
             `;
             btn.disabled = true;
-            
-            status.textContent = 'Connecting to trend networks worldwide...';
+            status.textContent = 'Connecting to trend networks...';
 
             try {
                 const response = await fetch('/api/trends');
@@ -145,7 +239,7 @@
                 if (data.success) {
                     trendsData = data;
                     displayTrends();
-                    status.textContent = `Fresh trends loaded • ${new Date().toLocaleTimeString()} • Click to copy`;
+                    status.textContent = `Fresh trends loaded • ${new Date().toLocaleTimeString('en-US', { timeZone: 'Africa/Nairobi' })} • Click to copy`;
                 } else {
                     status.textContent = `Error: ${data.error}`;
                 }
@@ -163,40 +257,49 @@
         }
 
         function displayTrends() {
-            const countries = ['kenya', 'us', 'uk'];
+            const categories = ['kenya', 'worldwide', 'xtrends', 'news', 'technology', 'entertainment', 'sports', 'lifestyle', 'business', 'health', 'science', 'fashion'];
             const icons = [
-                'https://www.svgrepo.com/download/381643/flame.svg', // Fire for Kenya
-                'https://www.svgrepo.com/download/513373/rocket.svg', // Rocket for US
-                'https://www.svgrepo.com/download/302554/star.svg' // Star for UK
+                'https://flagcdn.com/144x108/ke.svg', // Kenya
+                'https://www.svgrepo.com/download/513373/rocket.svg', // Worldwide
+                'https://www.svgrepo.com/download/353140/twitter.svg', // X Trends
+                'https://www.svgrepo.com/download/302554/star.svg', // News
+                'https://www.svgrepo.com/download/381643/flame.svg', // Technology
+                'https://www.svgrepo.com/download/354162/football.svg', // Entertainment
+                'https://www.svgrepo.com/download/354162/football.svg', // Sports
+                'https://www.svgrepo.com/download/513373/rocket.svg', // Lifestyle
+                'https://www.svgrepo.com/download/302554/star.svg', // Business
+                'https://www.svgrepo.com/download/381643/flame.svg', // Health
+                'https://www.svgrepo.com/download/353140/twitter.svg', // Science
+                'https://www.svgrepo.com/download/513373/rocket.svg' // Fashion
             ];
             
-            countries.forEach((country, index) => {
-                const container = document.getElementById(country);
-                const trends = trendsData[country] || [];
+            categories.forEach((category, index) => {
+                const container = document.getElementById(category);
+                const trends = trendsData[category] || [];
                 const iconUrl = icons[index];
                 
                 if (trends.length === 0) {
                     container.innerHTML = `
-                        <div class="text-center text-gray-500 py-8">
+                        <div class="text-center text-gray-500 py-6 text-sm">
                             <p>No trends available</p>
-                            <p class="text-sm mt-2">Try again in a moment</p>
+                            <p class="text-xs mt-1">Try again in a moment</p>
                         </div>
                     `;
                     return;
                 }
                 
-                container.innerHTML = trends.slice(0, 12).map((trend, i) => 
-                    `<div class="flex items-center justify-between p-4 bg-gray-900 hover:bg-gray-700 rounded-md cursor-pointer transition duration-300" onclick="selectTrend('${trend.replace(/'/g, "\\'")}')">
-                        <div class="flex items-center flex-1">
-                            <div class="w-8 h-8 bg-gray-700 text-white rounded-md flex items-center justify-center font-medium mr-4">
+                container.innerHTML = trends.slice(0, 10).map((trend, i) => 
+                    `<div class="flex items-center justify-between p-3 bg-gray-900 hover:bg-gray-700 rounded-md cursor-pointer transition duration-300" onclick="selectTrend('${trend.replace(/'/g, "\\'")}')">
+                        <div class="flex items-center flex-1 min-w-0">
+                            <div class="w-7 h-7 bg-gray-700 text-white rounded flex items-center justify-center text-sm font-medium mr-3">
                                 ${i + 1}
                             </div>
-                            <div class="flex-1">
-                                <span class="block text-white truncate">${trend}</span>
-                                <span class="text-sm text-gray-500">Click to copy</span>
+                            <div class="flex-1 min-w-0">
+                                <span class="block text-white text-sm truncate">${trend}</span>
+                                <span class="text-xs text-gray-500">Click to copy</span>
                             </div>
                         </div>
-                        <img src="${iconUrl}" alt="Trend Icon" class="w-6 h-6 text-gray-300">
+                        <img src="${iconUrl}" alt="Trend Icon" class="w-5 h-5">
                     </div>`
                 ).join('');
             });
@@ -219,9 +322,10 @@
             }, 3000);
         }
 
-        // Auto fetch on load
+        // Auto fetch on load and every 10 minutes
         document.addEventListener('DOMContentLoaded', () => {
-            setTimeout(() => fetchTrends(), 500);
+            fetchTrends();
+            setInterval(fetchTrends, 10 * 60 * 1000);
         });
     </script>
 </body>
