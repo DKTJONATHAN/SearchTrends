@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trends Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    animation: {
+                        'gradient': 'gradient 6s ease infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                        'glow': 'glow 2s ease-in-out infinite alternate',
+                        'shimmer': 'shimmer 2.5s infinite',
+                        'bounce-slow': 'bounce 3s infinite',
+                    },
+                    keyframes: {
+                        gradient: {
+                            '0%, 100%': { 'background-position': '0% 50%' },
+                            '50%': { 'background-position': '100% 50%' }
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-10px)' }
+                        },
+                        glow: {
+                            '0%': { 'box-shadow': '0 0 20px rgba(59, 130, 246, 0.5)' },
+                            '100%': { 'box-shadow': '0 0 30px rgba(59, 130, 246, 0.8)' }
+                        },
+                        shimmer: {
+                            '0%': { transform: 'translateX(-100%)' },
+                            '100%': { transform: 'translateX(100%)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Space Grotesk', sans-serif; }
+        .bg-mesh { background-image: radial-gradient(circle at 25% 25%, rgba(147, 51, 234, 0.1) 0%, transparent 50%), radial-gradient(circle at 75% 75%, rgba(59, 130, 246, 0.1) 0%, transparent 50%); }
+        .glass { backdrop-filter: blur(16px); background: rgba(255, 255, 255, 0.8); border: 1px solid rgba(255, 255, 255, 0.2); }
+        .glass-dark { backdrop-filter: blur(16px); background: rgba(0, 0, 0, 0.1); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .gradient-text { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .trend-glow:hover { box-shadow: 0 0 25px rgba(147, 51, 234, 0.3); }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 bg-mesh relative overflow-x-hidden">
+    <!-- Animated Background Elements -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+        <div class="absolute -top-4 -right-4 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-float"></div>
+        <div class="absolute -bottom-8 -left-4 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-float" style="animation-delay: -2s;"></div>
+        <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-indigo-500 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-float" style="animation-delay: -4s;"></div>
+    </div>
+
+    <!-- Header Section -->
+    <div class="relative z-10 pt-20 pb-32 px-4">
+        <div class="max-w-6xl mx-auto text-center">
+            <!-- Floating Icon -->
+            <div class="inline-flex items-center justify-center w-24 h-24 glass rounded-full mb-8 animate-bounce-slow">
+                <svg class="w-12 h-12 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                </svg>
+            </div>
+
+            <!-- Title with Gradient -->
+            <h1 class="text-7xl md:text-8xl font-bold mb-6 bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent animate-gradient bg-300% leading-tight">
+                TrendScope
+            </h1>
+            
+            <!-- Subtitle -->
+            <p class="text-2xl md:text-3xl text-gray-300 font-light mb-4 max-w-3xl mx-auto leading-relaxed">
+                Discover what the world is searching for
+            </p>
+            <p class="text-lg text-gray-400 mb-12 max-w-2xl mx-auto">
+                Real-time trending topics from Kenya, US, and UK to fuel your viral content strategy
+            </p>
+            
+            <!-- CTA Button -->
+            <button onclick="fetchTrends()" id="fetchBtn" class="group relative px-10 py-5 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white rounded-full font-semibold text-xl shadow-2xl hover:shadow-purple-500/25 transform hover:scale-105 transition-all duration-500 animate-glow">
+                <div class="absolute inset-0 bg-gradient-to-r from-purple-400 to-blue-400 rounded-full opacity-0 group-hover:opacity-30 blur transition-opacity duration-500"></div>
+                <span class="relative flex items-center justify-center">
+                    <svg class="w-6 h-6 mr-3 group-hover:rotate-180 transition-transform duration-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                    Discover Trends
+                </span>
+                <div class="absolute inset-0 rounded-full">
+                    <div class="absolute inset-0 rounded-full bg-gradient-to-r from-transparent via-white to-transparent opacity-0 group-hover:opacity-20 transform -skew-x-12 translate-x-full group-hover:-translate-x-full transition-transform duration-1000"></div>
+                </div>
+            </button>
+        </div>
+    </div>
+
+    <!-- Status Card -->
+    <div class="max-w-4xl mx-auto px-4 -mt-16 relative z-20 mb-16">
+        <div class="glass rounded-2xl p-6 shadow-2xl border border-white/10">
+            <div class="flex items-center justify-center">
+                <div id="status" class="flex items-center text-gray-300 font-medium text-lg">
+                    <div class="w-4 h-4 bg-gradient-to-r from-green-400 to-emerald-400 rounded-full mr-4 animate-pulse"></div>
+                    Ready to explore global trends
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trends Grid -->
+    <div class="max-w-8xl mx-auto px-4 pb-20 relative z-10">
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-10">
+            <!-- Kenya Card -->
+            <div class="group relative">
+                <div class="absolute inset-0 bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-3xl blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div class="relative glass rounded-3xl shadow-2xl overflow-hidden border border-white/10 transform hover:scale-105 transition-all duration-500 trend-glow">
+                    <div class="bg-gradient-to-br from-green-500 via-emerald-500 to-green-600 p-8 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full"></div>
+                        <div class="absolute bottom-0 left-0 -mb-8 -ml-8 w-32 h-32 bg-white/5 rounded-full"></div>
+                        <div class="relative flex items-center justify-between">
+                            <div>
+                                <h2 class="text-3xl font-bold text-white mb-2">Kenya</h2>
+                                <p class="text-green-100 text-lg">East Africa's Digital Hub</p>
+                            </div>
+                            <div class="text-6xl animate-bounce-slow">🇰🇪</div>
+                        </div>
+                    </div>
+                    <div class="p-8">
+                        <div id="kenya" class="space-y-4">
+                            <div class="text-center text-gray-400 py-12">
+                                <div class="inline-flex items-center space-x-2">
+                                    <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                                    <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse" style="animation-delay: 0.2s;"></div>
+                                    <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse" style="animation-delay: 0.4s;"></div>
+                                </div>
+                                <p class="mt-4 text-lg">Discovering trends...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- US Card -->
+            <div class="group relative">
+                <div class="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-3xl blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div class="relative glass rounded-3xl shadow-2xl overflow-hidden border border-white/10 transform hover:scale-105 transition-all duration-500 trend-glow">
+                    <div class="bg-gradient-to-br from-blue-500 via-indigo-500 to-blue-600 p-8 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full"></div>
+                        <div class="absolute bottom-0 left-0 -mb-8 -ml-8 w-32 h-32 bg-white/5 rounded-full"></div>
+                        <div class="relative flex items-center justify-between">
+                            <div>
+                                <h2 class="text-3xl font-bold text-white mb-2">United States</h2>
+                                <p class="text-blue-100 text-lg">Global Trendsetter</p>
+                            </div>
+                            <div class="text-6xl animate-bounce-slow" style="animation-delay: -1s;">🇺🇸</div>
+                        </div>
+                    </div>
+                    <div class="p-8">
+                        <div id="us" class="space-y-4">
+                            <div class="text-center text-gray-400 py-12">
+                                <div class="inline-flex items-center space-x-2">
+                                    <div class="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                                    <div class="w-2 h-2 bg-blue-400 rounded-full animate-pulse" style="animation-delay: 0.2s;"></div>
+                                    <div class="w-2 h-2 bg-blue-400 rounded-full animate-pulse" style="animation-delay: 0.4s;"></div>
+                                </div>
+                                <p class="mt-4 text-lg">Discovering trends...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- UK Card -->
+            <div class="group relative">
+                <div class="absolute inset-0 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-3xl blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div class="relative glass rounded-3xl shadow-2xl overflow-hidden border border-white/10 transform hover:scale-105 transition-all duration-500 trend-glow">
+                    <div class="bg-gradient-to-br from-purple-500 via-pink-500 to-purple-600 p-8 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full"></div>
+                        <div class="absolute bottom-0 left-0 -mb-8 -ml-8 w-32 h-32 bg-white/5 rounded-full"></div>
+                        <div class="relative flex items-center justify-between">
+                            <div>
+                                <h2 class="text-3xl font-bold text-white mb-2">United Kingdom</h2>
+                                <p class="text-purple-100 text-lg">European Influencer</p>
+                            </div>
+                            <div class="text-6xl animate-bounce-slow" style="animation-delay: -2s;">🇬🇧</div>
+                        </div>
+                    </div>
+                    <div class="p-8">
+                        <div id="uk" class="space-y-4">
+                            <div class="text-center text-gray-400 py-12">
+                                <div class="inline-flex items-center space-x-2">
+                                    <div class="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
+                                    <div class="w-2 h-2 bg-purple-400 rounded-full animate-pulse" style="animation-delay: 0.2s;"></div>
+                                    <div class="w-2 h-2 bg-purple-400 rounded-full animate-pulse" style="animation-delay: 0.4s;"></div>
+                                </div>
+                                <p class="mt-4 text-lg">Discovering trends...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="text-center py-12 text-gray-400 relative z-10">
+        <div class="max-w-2xl mx-auto px-4">
+            <p class="text-lg mb-2">✨ Click any trend to copy it instantly</p>
+            <p class="text-sm text-gray-500">Your gateway to viral content ideas</p>
+        </div>
+    </div>
+
+    <script>
+        let trendsData = {};
+
+        async function fetchTrends() {
+            const btn = document.getElementById('fetchBtn');
+            const status = document.getElementById('status');
+            
+            // Update button state with enhanced animation
+            btn.innerHTML = `
+                <span class="relative flex items-center justify-center">
+                    <svg class="w-6 h-6 mr-3 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    Analyzing Global Trends...
+                </span>
+            `;
+            btn.disabled = true;
+            btn.classList.add('animate-pulse');
+            
+            status.innerHTML = `
+                <div class="flex items-center text-purple-300 font-medium text-lg">
+                    <div class="w-4 h-4 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full mr-4 animate-spin"></div>
+                    Connecting to trend networks worldwide...
+                </div>
+            `;
+
+            try {
+                const response = await fetch('/api/trends');
+                const data = await response.json();
+                
+                if (data.success) {
+                    trendsData = data;
+                    displayTrends();
+                    status.innerHTML = `
+                        <div class="flex items-center text-green-300 font-medium text-lg">
+                            <div class="w-4 h-4 bg-gradient-to-r from-green-400 to-emerald-400 rounded-full mr-4 animate-pulse"></div>
+                            ✨ Fresh trends loaded • ${new Date().toLocaleTimeString()} • Click to copy
+                        </div>
+                    `;
+                } else {
+                    status.innerHTML = `
+                        <div class="flex items-center text-red-300 font-medium text-lg">
+                            <div class="w-4 h-4 bg-gradient-to-r from-red-400 to-pink-400 rounded-full mr-4 animate-pulse"></div>
+                            ⚠️ ${data.error}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                status.innerHTML = `
+                    <div class="flex items-center text-orange-300 font-medium text-lg">
+                        <div class="w-4 h-4 bg-gradient-to-r from-orange-400 to-red-400 rounded-full mr-4 animate-pulse"></div>
+                        🔌 Connection failed - check your server
+                    </div>
+                `;
+            }
+
+            // Reset button with enhanced styling
+            btn.innerHTML = `
+                <span class="relative flex items-center justify-center">
+                    <svg class="w-6 h-6 mr-3 group-hover:rotate-180 transition-transform duration-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                    Discover Trends
+                </span>
+                <div class="absolute inset-0 rounded-full">
+                    <div class="absolute inset-0 rounded-full bg-gradient-to-r from-transparent via-white to-transparent opacity-0 group-hover:opacity-20 transform -skew-x-12 translate-x-full group-hover:-translate-x-full transition-transform duration-1000"></div>
+                </div>
+            `;
+            btn.disabled = false;
+            btn.classList.remove('animate-pulse');
+        }
+
+        function displayTrends() {
+            const countries = ['kenya', 'us', 'uk'];
+            const colors = [
+                { primary: 'green', secondary: 'emerald', emoji: '🔥' },
+                { primary: 'blue', secondary: 'indigo', emoji: '🚀' },
+                { primary: 'purple', secondary: 'pink', emoji: '⭐' }
+            ];
+            
+            countries.forEach((country, index) => {
+                const container = document.getElementById(country);
+                const trends = trendsData[country] || [];
+                const color = colors[index];
+                
+                if (trends.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center text-gray-400 py-12">
+                            <div class="text-6xl mb-4 opacity-50">😔</div>
+                            <p class="text-xl">No trends available</p>
+                            <p class="text-sm text-gray-500 mt-2">Try again in a moment</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                container.innerHTML = trends.slice(0, 12).map((trend, i) => 
+                    `<div class="group relative p-6 bg-gradient-to-r from-white/5 to-white/10 hover:from-${color.primary}-500/20 hover:to-${color.secondary}-500/20 rounded-2xl cursor-pointer border border-white/10 hover:border-${color.primary}-400/30 transition-all duration-500 transform hover:scale-105 hover:shadow-xl backdrop-blur-sm" onclick="selectTrend('${trend.replace(/'/g, "\\'")}')">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center flex-1 min-w-0">
+                                <div class="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-${color.primary}-400 to-${color.secondary}-500 text-white rounded-xl flex items-center justify-center text-lg font-bold mr-4 group-hover:shadow-lg transition-all duration-300 group-hover:scale-110">
+                                    ${i + 1}
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <span class="block font-semibold text-gray-200 group-hover:text-white text-lg leading-tight transition-colors duration-300 truncate">${trend}</span>
+                                    <span class="text-sm text-gray-400 group-hover:text-${color.primary}-200 transition-colors duration-300">Click to copy</span>
+                                </div>
+                            </div>
+                            <div class="flex-shrink-0 text-3xl opacity-70 group-hover:opacity-100 transition-opacity duration-300 ml-4 group-hover:animate-bounce">${color.emoji}</div>
+                        </div>
+                        <div class="absolute inset-0 rounded-2xl bg-gradient-to-r from-${color.primary}-500/0 to-${color.secondary}-500/0 group-hover:from-${color.primary}-500/10 group-hover:to-${color.secondary}-500/10 transition-all duration-500"></div>
+                    </div>`
+                ).join('');
+            });
+        }
+
+        function selectTrend(trend) {
+            const status = document.getElementById('status');
+            
+            navigator.clipboard.writeText(trend).then(() => {
+                status.innerHTML = `
+                    <div class="flex items-center text-emerald-300 font-medium text-lg">
+                        <div class="w-4 h-4 bg-gradient-to-r from-emerald-400 to-green-400 rounded-full mr-4 animate-pulse"></div>
+                        🎉 Copied: "${trend}" • Ready for your next viral post!
+                    </div>
+                `;
+                
+                setTimeout(() => {
+                    status.innerHTML = `
+                        <div class="flex items-center text-green-300 font-medium text-lg">
+                            <div class="w-4 h-4 bg-gradient-to-r from-green-400 to-emerald-400 rounded-full mr-4 animate-pulse"></div>
+                            ✨ Fresh trends loaded • ${new Date().toLocaleTimeString()} • Click to copy
+                        </div>
+                    `;
+                }, 4000);
+            }).catch(() => {
+                status.innerHTML = `
+                    <div class="flex items-center text-yellow-300 font-medium text-lg">
+                        <div class="w-4 h-4 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full mr-4 animate-pulse"></div>
+                        📋 Selected: "${trend}"
+                    </div>
+                `;
+            });
+        }
+
+        // Enhanced page load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Add entrance animations
+            document.body.style.opacity = '0';
+            setTimeout(() => {
+                document.body.style.transition = 'opacity 1s ease-in-out';
+                document.body.style.opacity = '1';
+                setTimeout(() => fetchTrends(), 500);
+            }, 100);
+        });
+    </script>
+</body>
+</html>
