@@ -80,6 +80,23 @@
             background-clip: text;
         }
         
+        .region-badge {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.25rem;
+            margin-left: 0.5rem;
+        }
+        
+        .region-kenyan {
+            background-color: #ef4444;
+            color: white;
+        }
+        
+        .region-global {
+            background-color: #3b82f6;
+            color: white;
+        }
+        
         @media (max-width: 640px) {
             .container { padding-left: 1rem; padding-right: 1rem; }
             .trend-card { width: 100%; }
@@ -103,19 +120,19 @@
             </div>
             <h1 class="text-5xl font-bold mb-4 text-white">Trend<span class="gradient-text">Scope</span></h1>
             <p class="text-lg text-gray-300 mb-4 max-w-2xl mx-auto">
-                Uncover trending keywords for viral content across multiple categories
+                Discover trending topics across multiple categories (5 Kenyan + 5 Global each)
             </p>
             <p class="text-sm text-gray-400 mb-8 max-w-xl mx-auto">
-                Real-time trends from Kenya, global topics, news, technology, entertainment, and more
+                Real-time trends from Kenya and global perspectives across all categories
             </p>
             <div class="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-4">
-                <button onclick="fetchTrends()" id="fetchBtn" class="px-8 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-all duration-300 flex items-center shadow-md hover:shadow-lg">
+                <button onclick="fetchAllNews()" id="fetchBtn" class="px-8 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-all duration-300 flex items-center shadow-md hover:shadow-lg">
                     <i class="fas fa-bolt mr-2"></i>
-                    Discover Trends
+                    Load All News
                 </button>
-                <button onclick="exportCSV()" id="exportBtn" class="px-8 py-3.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-all duration-300 flex items-center shadow-md hover:shadow-lg">
-                    <i class="fas fa-file-export mr-2"></i>
-                    Export CSV
+                <button onclick="fetchTrends()" id="trendsBtn" class="px-8 py-3.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-all duration-300 flex items-center shadow-md hover:shadow-lg">
+                    <i class="fas fa-chart-line mr-2"></i>
+                    Get Trends
                 </button>
                 <button onclick="toggleAutoRefresh()" id="autoRefreshBtn" class="px-6 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-all duration-300 flex items-center shadow-md hover:shadow-lg">
                     <i class="fas fa-sync-alt mr-2"></i>
@@ -130,7 +147,7 @@
         <div class="bg-gray-800/50 rounded-lg p-4 backdrop-blur-sm border border-gray-700/30">
             <p id="status" class="text-center text-gray-300 text-sm flex items-center justify-center">
                 <i class="fas fa-info-circle mr-2 text-indigo-400"></i>
-                <span>Ready to explore trends. Click "Discover Trends" to begin.</span>
+                <span>Ready to explore news. Click "Load All News" to begin.</span>
             </p>
             <div id="progress" class="h-1 bg-gray-700 mt-2 rounded-full hidden">
                 <div class="h-full bg-indigo-500 rounded-full progress-bar"></div>
@@ -138,77 +155,20 @@
         </div>
     </div>
 
-    <!-- Trends Grid -->
+    <!-- News Grid -->
     <div class="container mx-auto px-4 pb-20">
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" id="trendsContainer">
-            <!-- Kenya -->
-            <div class="trend-card category-kenya bg-gray-800/70 rounded-lg overflow-hidden border border-gray-700/30 backdrop-blur-sm">
-                <div class="bg-gradient-to-r from-red-600/20 to-gray-900/70 p-5 flex items-center justify-between">
-                    <div>
-                        <h2 class="text-xl font-semibold text-white mb-1">Kenya</h2>
-                        <p class="text-xs text-gray-400">Trending in Kenya</p>
-                    </div>
-                    <i class="fas fa-flag text-red-400 text-2xl"></i>
-                </div>
-                <div class="p-5">
-                    <div id="kenya" class="space-y-3">
-                        <div class="text-center text-gray-500 py-8 text-sm">
-                            <i class="fas fa-flag text-2xl mb-2 opacity-50"></i>
-                            <p>No data yet</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Worldwide -->
-            <div class="trend-card category-worldwide bg-gray-800/70 rounded-lg overflow-hidden border border-gray-700/30 backdrop-blur-sm">
-                <div class="bg-gradient-to-r from-blue-600/20 to-gray-900/70 p-5 flex items-center justify-between">
-                    <div>
-                        <h2 class="text-xl font-semibold text-white mb-1">Worldwide</h2>
-                        <p class="text-xs text-gray-400">Global Hot Topics</p>
-                    </div>
-                    <i class="fas fa-globe-americas text-blue-400 text-2xl"></i>
-                </div>
-                <div class="p-5">
-                    <div id="worldwide" class="space-y-3">
-                        <div class="text-center text-gray-500 py-8 text-sm">
-                            <i class="fas fa-globe text-2xl mb-2 opacity-50"></i>
-                            <p>No data yet</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Google Trends -->
-            <div class="trend-card category-googletrends bg-gray-800/70 rounded-lg overflow-hidden border border-gray-700/30 backdrop-blur-sm">
-                <div class="bg-gradient-to-r from-amber-600/20 to-gray-900/70 p-5 flex items-center justify-between">
-                    <div>
-                        <h2 class="text-xl font-semibold text-white mb-1">Google Trends</h2>
-                        <p class="text-xs text-gray-400">What's trending now</p>
-                    </div>
-                    <i class="fab fa-google text-amber-400 text-2xl"></i>
-                </div>
-                <div class="p-5">
-                    <div id="googletrends" class="space-y-3">
-                        <div class="text-center text-gray-500 py-8 text-sm">
-                            <i class="fas fa-chart-line text-2xl mb-2 opacity-50"></i>
-                            <p>No data yet</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- News -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" id="newsContainer">
+            <!-- General News -->
             <div class="trend-card category-news bg-gray-800/70 rounded-lg overflow-hidden border border-gray-700/30 backdrop-blur-sm">
                 <div class="bg-gradient-to-r from-emerald-600/20 to-gray-900/70 p-5 flex items-center justify-between">
                     <div>
-                        <h2 class="text-xl font-semibold text-white mb-1">News</h2>
-                        <p class="text-xs text-gray-400">Global Headlines</p>
+                        <h2 class="text-xl font-semibold text-white mb-1">General News</h2>
+                        <p class="text-xs text-gray-400">5 Kenyan + 5 Global topics</p>
                     </div>
                     <i class="fas fa-newspaper text-emerald-400 text-2xl"></i>
                 </div>
                 <div class="p-5">
-                    <div id="news" class="space-y-3">
+                    <div id="general" class="space-y-3">
                         <div class="text-center text-gray-500 py-8 text-sm">
                             <i class="fas fa-newspaper text-2xl mb-2 opacity-50"></i>
                             <p>No data yet</p>
@@ -217,76 +177,19 @@
                 </div>
             </div>
 
-            <!-- Technology -->
-            <div class="trend-card category-technology bg-gray-800/70 rounded-lg overflow-hidden border border-gray-700/30 backdrop-blur-sm">
-                <div class="bg-gradient-to-r from-purple-600/20 to-gray-900/70 p-5 flex items-center justify-between">
+            <!-- Politics -->
+            <div class="trend-card category-kenya bg-gray-800/70 rounded-lg overflow-hidden border border-gray-700/30 backdrop-blur-sm">
+                <div class="bg-gradient-to-r from-red-600/20 to-gray-900/70 p-5 flex items-center justify-between">
                     <div>
-                        <h2 class="text-xl font-semibold text-white mb-1">Technology</h2>
-                        <p class="text-xs text-gray-400">Innovations & Gadgets</p>
+                        <h2 class="text-xl font-semibold text-white mb-1">Politics</h2>
+                        <p class="text-xs text-gray-400">5 Kenyan + 5 Global topics</p>
                     </div>
-                    <i class="fas fa-microchip text-purple-400 text-2xl"></i>
+                    <i class="fas fa-landmark text-red-400 text-2xl"></i>
                 </div>
                 <div class="p-5">
-                    <div id="technology" class="space-y-3">
+                    <div id="politics" class="space-y-3">
                         <div class="text-center text-gray-500 py-8 text-sm">
-                            <i class="fas fa-microchip text-2xl mb-2 opacity-50"></i>
-                            <p>No data yet</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Entertainment -->
-            <div class="trend-card category-entertainment bg-gray-800/70 rounded-lg overflow-hidden border border-gray-700/30 backdrop-blur-sm">
-                <div class="bg-gradient-to-r from-pink-600/20 to-gray-900/70 p-5 flex items-center justify-between">
-                    <div>
-                        <h2 class="text-xl font-semibold text-white mb-1">Entertainment</h2>
-                        <p class="text-xs text-gray-400">Movies, Music & More</p>
-                    </div>
-                    <i class="fas fa-film text-pink-400 text-2xl"></i>
-                </div>
-                <div class="p-5">
-                    <div id="entertainment" class="space-y-3">
-                        <div class="text-center text-gray-500 py-8 text-sm">
-                            <i class="fas fa-film text-2xl mb-2 opacity-50"></i>
-                            <p>No data yet</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Sports -->
-            <div class="trend-card category-sports bg-gray-800/70 rounded-lg overflow-hidden border border-gray-700/30 backdrop-blur-sm">
-                <div class="bg-gradient-to-r from-orange-600/20 to-gray-900/70 p-5 flex items-center justify-between">
-                    <div>
-                        <h2 class="text-xl font-semibold text-white mb-1">Sports</h2>
-                        <p class="text-xs text-gray-400">Games & Athletes</p>
-                    </div>
-                    <i class="fas fa-basketball-ball text-orange-400 text-2xl"></i>
-                </div>
-                <div class="p-5">
-                    <div id="sports" class="space-y-3">
-                        <div class="text-center text-gray-500 py-8 text-sm">
-                            <i class="fas fa-basketball-ball text-2xl mb-2 opacity-50"></i>
-                            <p>No data yet</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Lifestyle -->
-            <div class="trend-card category-lifestyle bg-gray-800/70 rounded-lg overflow-hidden border border-gray-700/30 backdrop-blur-sm">
-                <div class="bg-gradient-to-r from-cyan-600/20 to-gray-900/70 p-5 flex items-center justify-between">
-                    <div>
-                        <h2 class="text-xl font-semibold text-white mb-1">Lifestyle</h2>
-                        <p class="text-xs text-gray-400">Trends & Wellness</p>
-                    </div>
-                    <i class="fas fa-heart text-cyan-400 text-2xl"></i>
-                </div>
-                <div class="p-5">
-                    <div id="lifestyle" class="space-y-3">
-                        <div class="text-center text-gray-500 py-8 text-sm">
-                            <i class="fas fa-heart text-2xl mb-2 opacity-50"></i>
+                            <i class="fas fa-landmark text-2xl mb-2 opacity-50"></i>
                             <p>No data yet</p>
                         </div>
                     </div>
@@ -298,7 +201,7 @@
                 <div class="bg-gradient-to-r from-lime-600/20 to-gray-900/70 p-5 flex items-center justify-between">
                     <div>
                         <h2 class="text-xl font-semibold text-white mb-1">Business</h2>
-                        <p class="text-xs text-gray-400">Markets & Startups</p>
+                        <p class="text-xs text-gray-400">5 Kenyan + 5 Global topics</p>
                     </div>
                     <i class="fas fa-chart-line text-lime-400 text-2xl"></i>
                 </div>
@@ -312,12 +215,69 @@
                 </div>
             </div>
 
+            <!-- Sports -->
+            <div class="trend-card category-sports bg-gray-800/70 rounded-lg overflow-hidden border border-gray-700/30 backdrop-blur-sm">
+                <div class="bg-gradient-to-r from-orange-600/20 to-gray-900/70 p-5 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-semibold text-white mb-1">Sports</h2>
+                        <p class="text-xs text-gray-400">5 Kenyan + 5 Global topics</p>
+                    </div>
+                    <i class="fas fa-basketball-ball text-orange-400 text-2xl"></i>
+                </div>
+                <div class="p-5">
+                    <div id="sports" class="space-y-3">
+                        <div class="text-center text-gray-500 py-8 text-sm">
+                            <i class="fas fa-basketball-ball text-2xl mb-2 opacity-50"></i>
+                            <p>No data yet</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Entertainment -->
+            <div class="trend-card category-entertainment bg-gray-800/70 rounded-lg overflow-hidden border border-gray-700/30 backdrop-blur-sm">
+                <div class="bg-gradient-to-r from-pink-600/20 to-gray-900/70 p-5 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-semibold text-white mb-1">Entertainment</h2>
+                        <p class="text-xs text-gray-400">5 Kenyan + 5 Global topics</p>
+                    </div>
+                    <i class="fas fa-film text-pink-400 text-2xl"></i>
+                </div>
+                <div class="p-5">
+                    <div id="entertainment" class="space-y-3">
+                        <div class="text-center text-gray-500 py-8 text-sm">
+                            <i class="fas fa-film text-2xl mb-2 opacity-50"></i>
+                            <p>No data yet</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Technology -->
+            <div class="trend-card category-technology bg-gray-800/70 rounded-lg overflow-hidden border border-gray-700/30 backdrop-blur-sm">
+                <div class="bg-gradient-to-r from-purple-600/20 to-gray-900/70 p-5 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-semibold text-white mb-1">Technology</h2>
+                        <p class="text-xs text-gray-400">5 Kenyan + 5 Global topics</p>
+                    </div>
+                    <i class="fas fa-microchip text-purple-400 text-2xl"></i>
+                </div>
+                <div class="p-5">
+                    <div id="technology" class="space-y-3">
+                        <div class="text-center text-gray-500 py-8 text-sm">
+                            <i class="fas fa-microchip text-2xl mb-2 opacity-50"></i>
+                            <p>No data yet</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Health -->
             <div class="trend-card category-health bg-gray-800/70 rounded-lg overflow-hidden border border-gray-700/30 backdrop-blur-sm">
                 <div class="bg-gradient-to-r from-fuchsia-600/20 to-gray-900/70 p-5 flex items-center justify-between">
                     <div>
                         <h2 class="text-xl font-semibold text-white mb-1">Health</h2>
-                        <p class="text-xs text-gray-400">Wellness & Medicine</p>
+                        <p class="text-xs text-gray-400">5 Kenyan + 5 Global topics</p>
                     </div>
                     <i class="fas fa-heartbeat text-fuchsia-400 text-2xl"></i>
                 </div>
@@ -331,38 +291,38 @@
                 </div>
             </div>
 
-            <!-- Science -->
-            <div class="trend-card category-science bg-gray-800/70 rounded-lg overflow-hidden border border-gray-700/30 backdrop-blur-sm">
-                <div class="bg-gradient-to-r from-cyan-300/20 to-gray-900/70 p-5 flex items-center justify-between">
+            <!-- Lifestyle -->
+            <div class="trend-card category-lifestyle bg-gray-800/70 rounded-lg overflow-hidden border border-gray-700/30 backdrop-blur-sm">
+                <div class="bg-gradient-to-r from-cyan-600/20 to-gray-900/70 p-5 flex items-center justify-between">
                     <div>
-                        <h2 class="text-xl font-semibold text-white mb-1">Science</h2>
-                        <p class="text-xs text-gray-400">Discoveries & Research</p>
+                        <h2 class="text-xl font-semibold text-white mb-1">Lifestyle</h2>
+                        <p class="text-xs text-gray-400">5 Kenyan + 5 Global topics</p>
                     </div>
-                    <i class="fas fa-flask text-cyan-300 text-2xl"></i>
+                    <i class="fas fa-heart text-cyan-400 text-2xl"></i>
                 </div>
                 <div class="p-5">
-                    <div id="science" class="space-y-3">
+                    <div id="lifestyle" class="space-y-3">
                         <div class="text-center text-gray-500 py-8 text-sm">
-                            <i class="fas fa-flask text-2xl mb-2 opacity-50"></i>
+                            <i class="fas fa-heart text-2xl mb-2 opacity-50"></i>
                             <p>No data yet</p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Fashion -->
-            <div class="trend-card category-fashion bg-gray-800/70 rounded-lg overflow-hidden border border-gray-700/30 backdrop-blur-sm">
-                <div class="bg-gradient-to-r from-rose-600/20 to-gray-900/70 p-5 flex items-center justify-between">
+            <!-- Global News -->
+            <div class="trend-card category-worldwide bg-gray-800/70 rounded-lg overflow-hidden border border-gray-700/30 backdrop-blur-sm">
+                <div class="bg-gradient-to-r from-blue-600/20 to-gray-900/70 p-5 flex items-center justify-between">
                     <div>
-                        <h2 class="text-xl font-semibold text-white mb-1">Fashion</h2>
-                        <p class="text-xs text-gray-400">Style & Trends</p>
+                        <h2 class="text-xl font-semibold text-white mb-1">Global News</h2>
+                        <p class="text-xs text-gray-400">International headlines</p>
                     </div>
-                    <i class="fas fa-tshirt text-rose-400 text-2xl"></i>
+                    <i class="fas fa-globe-americas text-blue-400 text-2xl"></i>
                 </div>
                 <div class="p-5">
-                    <div id="fashion" class="space-y-3">
+                    <div id="global" class="space-y-3">
                         <div class="text-center text-gray-500 py-8 text-sm">
-                            <i class="fas fa-tshirt text-2xl mb-2 opacity-50"></i>
+                            <i class="fas fa-globe text-2xl mb-2 opacity-50"></i>
                             <p>No data yet</p>
                         </div>
                     </div>
@@ -374,13 +334,13 @@
     <!-- Footer -->
     <div class="text-center py-8 text-gray-500 border-t border-gray-800/30 mx-4">
         <div class="container mx-auto px-4">
-            <p class="text-sm mb-1"><i class="fas fa-mouse-pointer mr-1"></i> Click any trend to copy keywords instantly</p>
-            <p class="text-xs"><i class="fas fa-bolt mr-1"></i> Your gateway to viral content ideas • Powered by Google Trends Kenya</p>
+            <p class="text-sm mb-1"><i class="fas fa-mouse-pointer mr-1"></i> Click any news item to copy headline instantly</p>
+            <p class="text-xs"><i class="fas fa-bolt mr-1"></i> Your gateway to trending content • Powered by GNews & NewsAPI</p>
         </div>
     </div>
 
     <script>
-        let trendsData = {};
+        let newsData = {};
         let autoRefreshInterval;
         let isAutoRefreshOn = true;
 
@@ -390,12 +350,12 @@
             startAutoRefresh();
             
             // Load initial data
-            fetchTrends();
+            fetchAllNews();
         });
 
         function startAutoRefresh() {
             if (autoRefreshInterval) clearInterval(autoRefreshInterval);
-            autoRefreshInterval = setInterval(fetchTrends, 10 * 60 * 1000);
+            autoRefreshInterval = setInterval(fetchAllNews, 10 * 60 * 1000);
             document.getElementById('autoRefreshBtn').innerHTML = '<i class="fas fa-sync-alt mr-2"></i> Auto-Refresh: On';
             document.getElementById('autoRefreshBtn').classList.remove('bg-gray-600');
             document.getElementById('autoRefreshBtn').classList.add('bg-emerald-600');
@@ -418,38 +378,38 @@
             }
         }
 
-        async function fetchTrends() {
+        async function fetchAllNews() {
             const btn = document.getElementById('fetchBtn');
             const status = document.getElementById('status');
             const progress = document.getElementById('progress');
             
             btn.innerHTML = `
                 <i class="fas fa-circle-notch animate-spin mr-2"></i>
-                Analyzing Trends...
+                Loading News...
             `;
             btn.disabled = true;
-            status.innerHTML = '<i class="fas fa-sync-alt animate-spin mr-2"></i> Scraping Google Trends Kenya...';
+            status.innerHTML = '<i class="fas fa-sync-alt animate-spin mr-2"></i> Fetching news from all categories...';
             
             progress.classList.remove('hidden');
             const progressBar = progress.querySelector('.progress-bar');
             progressBar.style.width = '30%';
 
             try {
-                const response = await fetch('/api/trends');
+                const response = await fetch('/api/news');
                 const data = await response.json();
                 
                 progressBar.style.width = '70%';
                 
                 if (data.success) {
-                    trendsData = data;
-                    displayTrends();
+                    newsData = data;
+                    displayNews();
                     const timeString = new Date().toLocaleTimeString('en-US', { 
                         timeZone: 'Africa/Nairobi',
                         hour12: true,
                         hour: '2-digit',
                         minute: '2-digit'
                     });
-                    status.innerHTML = `<i class="fas fa-check-circle text-green-400 mr-2"></i> Fresh Kenya trends loaded • ${timeString} EAT • Click to copy`;
+                    status.innerHTML = `<i class="fas fa-check-circle text-green-400 mr-2"></i> News loaded • ${timeString} EAT • Click to copy`;
                 } else {
                     status.innerHTML = `<i class="fas fa-exclamation-circle text-red-400 mr-2"></i> Error: ${data.error}`;
                 }
@@ -457,54 +417,29 @@
                 status.innerHTML = '<i class="fas fa-exclamation-triangle text-red-400 mr-2"></i> Connection failed - check your server';
                 
                 // Demo data for testing if server is down
-                trendsData = {
+                newsData = {
                     success: true,
-                    timestamp: new Date().toISOString(),
-                    cached: false,
-                    kenya: [
-                        "Elections 2023 updates",
-                        "Maize shortage crisis",
-                        "New Nairobi expressway",
-                        "MPs salary increase debate",
-                        "Flood alerts in coastal region"
+                    lastUpdated: new Date().toISOString(),
+                    general: [
+                        { title: "Kenyan election updates 2023", region: "kenyan" },
+                        { title: "Global climate summit results", region: "global" },
+                        { title: "Nairobi infrastructure projects", region: "kenyan" },
+                        { title: "International trade agreements", region: "global" }
                     ],
-                    worldwide: [
-                        "Climate change summit",
-                        "Stock market trends",
-                        "Ukraine conflict updates",
-                        "World Cup preparations",
-                        "NASA Mars mission"
+                    politics: [
+                        { title: "MPs salary debate in parliament", region: "kenyan" },
+                        { title: "US midterm elections analysis", region: "global" },
+                        { title: "County government developments", region: "kenyan" },
+                        { title: "EU policy changes", region: "global" }
                     ],
-                    googletrends: [
-                        "AI image generators",
-                        "Wordle strategies",
-                        "NFT market trends",
-                        "Metaverse developments",
-                        "ChatGPT latest features"
-                    ],
-                    news: [
-                        "Breaking: Major trade agreement signed",
-                        "Political scandal unfolds",
-                        "Economic indicators report",
-                        "International diplomacy news",
-                        "Technology sector mergers"
-                    ],
-                    technology: [
-                        "New iPhone features leaked",
-                        "Windows 12 preview",
-                        "AI assistant advancements",
-                        "5G network expansion",
-                        "Cybersecurity threats"
-                    ],
-                    entertainment: [
-                        "New Marvel movie announcement",
-                        "Celebrity relationship news",
-                        "Music award winners",
-                        "Streaming service content",
-                        "Video game releases"
+                    business: [
+                        { title: "Kenya stock market trends", region: "kenyan" },
+                        { title: "Global economic outlook", region: "global" },
+                        { title: "Safaricom financial results", region: "kenyan" },
+                        { title: "Tech company earnings", region: "global" }
                     ]
                 };
-                displayTrends();
+                displayNews();
             }
 
             progressBar.style.width = '100%';
@@ -514,74 +449,99 @@
 
             btn.innerHTML = `
                 <i class="fas fa-bolt mr-2"></i>
-                Discover Trends
+                Load All News
             `;
             btn.disabled = false;
         }
 
-        function displayTrends() {
-            const categories = ['kenya', 'worldwide', 'googletrends', 'news', 'technology', 'entertainment', 'sports', 'lifestyle', 'business', 'health', 'science', 'fashion'];
+        async function fetchTrends() {
+            const btn = document.getElementById('trendsBtn');
+            const status = document.getElementById('status');
+            
+            btn.innerHTML = `
+                <i class="fas fa-circle-notch animate-spin mr-2"></i>
+                Getting Trends...
+            `;
+            btn.disabled = true;
+            status.innerHTML = '<i class="fas fa-sync-alt animate-spin mr-2"></i> Fetching Google Trends data...';
+
+            try {
+                // This would call your trends endpoint if available
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                showToast('Trends feature coming soon! Using news data for now.');
+            } catch (error) {
+                status.innerHTML = '<i class="fas fa-exclamation-triangle text-red-400 mr-2"></i> Trends service unavailable';
+            }
+
+            btn.innerHTML = `
+                <i class="fas fa-chart-line mr-2"></i>
+                Get Trends
+            `;
+            btn.disabled = false;
+        }
+
+        function displayNews() {
+            const categories = ['general', 'politics', 'business', 'sports', 'entertainment', 'technology', 'health', 'lifestyle', 'global'];
             const icons = [
-                'fas fa-flag', // Kenya
-                'fas fa-globe-americas', // Worldwide
-                'fab fa-google', // Google Trends
-                'fas fa-newspaper', // News
-                'fas fa-microchip', // Technology
-                'fas fa-film', // Entertainment
-                'fas fa-basketball-ball', // Sports
-                'fas fa-heart', // Lifestyle
+                'fas fa-newspaper', // General
+                'fas fa-landmark', // Politics
                 'fas fa-chart-line', // Business
+                'fas fa-basketball-ball', // Sports
+                'fas fa-film', // Entertainment
+                'fas fa-microchip', // Technology
                 'fas fa-heartbeat', // Health
-                'fas fa-flask', // Science
-                'fas fa-tshirt' // Fashion
+                'fas fa-heart', // Lifestyle
+                'fas fa-globe-americas' // Global
             ];
             
             const colors = [
-                'text-red-400', // Kenya
-                'text-blue-400', // Worldwide
-                'text-amber-400', // Google Trends
-                'text-emerald-400', // News
-                'text-purple-400', // Technology
-                'text-pink-400', // Entertainment
-                'text-orange-400', // Sports
-                'text-cyan-400', // Lifestyle
+                'text-emerald-400', // General
+                'text-red-400', // Politics
                 'text-lime-400', // Business
+                'text-orange-400', // Sports
+                'text-pink-400', // Entertainment
+                'text-purple-400', // Technology
                 'text-fuchsia-400', // Health
-                'text-cyan-300', // Science
-                'text-rose-400' // Fashion
+                'text-cyan-400', // Lifestyle
+                'text-blue-400' // Global
             ];
             
             categories.forEach((category, index) => {
                 const container = document.getElementById(category);
-                const trends = trendsData[category] || [];
+                const items = newsData[category] || [];
                 const iconClass = icons[index];
                 const colorClass = colors[index];
                 
-                if (trends.length === 0) {
+                if (items.length === 0) {
                     container.innerHTML = `
                         <div class="text-center text-gray-500 py-8 text-sm">
                             <i class="${iconClass} text-2xl mb-2 opacity-50 ${colorClass}"></i>
-                            <p>No trends available</p>
+                            <p>No news available</p>
                             <p class="text-xs mt-1">Try again in a moment</p>
                         </div>
                     `;
                     return;
                 }
                 
-                container.innerHTML = trends.slice(0, 10).map((trend, i) => {
-                    // Add slight delay for staggered animation
+                container.innerHTML = items.slice(0, 10).map((item, i) => {
                     const delay = i * 0.05;
+                    const regionClass = item.region === 'kenyan' ? 'region-kenyan' : 'region-global';
+                    const regionText = item.region === 'kenyan' ? 'KE' : 'GL';
+                    
                     return `
                     <div class="trend-item flex items-center justify-between p-3 bg-gray-900/50 hover:bg-gray-700/50 rounded-md cursor-pointer transition-all duration-300 border border-gray-700/30" 
-                         onclick="selectTrend('${trend.replace(/'/g, "\\'")}')"
+                         onclick="selectNews('${item.title.replace(/'/g, "\\'")}')"
                          style="animation-delay: ${delay}s">
                         <div class="flex items-center flex-1 min-w-0">
                             <div class="w-7 h-7 bg-gray-800 text-white rounded flex items-center justify-center text-sm font-medium mr-3">
                                 ${i + 1}
                             </div>
                             <div class="flex-1 min-w-0">
-                                <span class="block text-white text-sm truncate">${trend}</span>
-                                <span class="text-xs text-gray-500">Click to copy</span>
+                                <div class="flex items-center">
+                                    <span class="block text-white text-sm truncate">${item.title}</span>
+                                    <span class="region-badge ${regionClass}">${regionText}</span>
+                                </div>
+                                <span class="text-xs text-gray-500">${item.source || 'Click to copy'}</span>
                             </div>
                         </div>
                         <i class="${iconClass} ${colorClass}"></i>
@@ -590,18 +550,18 @@
             });
         }
 
-        function selectTrend(trend) {
-            navigator.clipboard.writeText(trend).then(() => {
-                showToast(`Copied: "${trend}"`);
+        function selectNews(title) {
+            navigator.clipboard.writeText(title).then(() => {
+                showToast(`Copied: "${title}"`);
             }).catch(() => {
                 // Fallback for browsers that don't support clipboard API
                 const textArea = document.createElement('textarea');
-                textArea.value = trend;
+                textArea.value = title;
                 document.body.appendChild(textArea);
                 textArea.select();
                 document.execCommand('copy');
                 document.body.removeChild(textArea);
-                showToast(`Selected: "${trend}" (Copied)`);
+                showToast(`Selected: "${title}" (Copied)`);
             });
         }
 
@@ -618,8 +578,8 @@
         }
 
         function exportCSV() {
-            if (!trendsData || Object.keys(trendsData).length === 0) {
-                showToast('No data to export. Please fetch trends first.');
+            if (!newsData || Object.keys(newsData).length === 0) {
+                showToast('No data to export. Please load news first.');
                 return;
             }
             
@@ -627,7 +587,7 @@
             const link = document.createElement('a');
             link.href = '/api/export';
             link.target = '_blank';
-            link.download = 'trendscope-data.csv';
+            link.download = 'trendscope-news.csv';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
