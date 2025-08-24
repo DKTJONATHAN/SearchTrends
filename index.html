@@ -31,7 +31,7 @@
                 Uncover trending keywords for viral content
             </p>
             <p class="text-sm text-gray-500 mb-8 max-w-xl mx-auto">
-                Real-time trends across News, Technology, Entertainment, Sports, and more
+                Real-time trends from Kenya, Google Trends, News, and more
             </p>
             <div class="flex justify-center space-x-4">
                 <button onclick="fetchTrends()" id="fetchBtn" class="px-8 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-md font-medium transition duration-300">
@@ -65,7 +65,7 @@
                 <div class="bg-gray-900 p-5 flex items-center justify-between">
                     <div>
                         <h2 class="text-xl font-semibold text-white mb-1">Kenya</h2>
-                        <p class="text-xs text-gray-400">East Africa's Digital Hub</p>
+                        <p class="text-xs text-gray-400">Trending in Kenya</p>
                     </div>
                     <img src="https://flagcdn.com/144x108/ke.svg" alt="Kenya Flag" class="w-10 h-7">
                 </div>
@@ -88,13 +88,13 @@
             <div class="trend-card bg-gray-800 rounded-md overflow-hidden border border-gray-700">
                 <div class="bg-gray-900 p-5 flex items-center justify-between">
                     <div>
-                        <h2 class="text-xl font-semibold text-white mb-1">X Trends</h2>
-                        <p class="text-xs text-gray-400">What's trending on X</p>
+                        <h2 class="text-xl font-semibold text-white mb-1">Google Trends</h2>
+                        <p class="text-xs text-gray-400">What's trending now</p>
                     </div>
-                    <img src="https://www.svgrepo.com/download/353140/twitter.svg" alt="X Icon" class="w-8 h-8">
+                    <img src="https://www.svgrepo.com/download/388821/trending-up.svg" alt="Google Trends Icon" class="w-8 h-8">
                 </div>
                 <div class="p-5">
-                    <div id="xtrends" class="space-y-3"></div>
+                    <div id="googletrends" class="space-y-3"></div>
                 </div>
             </div>
             <div class="trend-card bg-gray-800 rounded-md overflow-hidden border border-gray-700">
@@ -212,7 +212,7 @@
     <div class="text-center py-8 text-gray-500">
         <div class="container mx-auto px-4">
             <p class="text-sm mb-1">Click any trend to copy keywords instantly</p>
-            <p class="text-xs">Your gateway to viral content ideas</p>
+            <p class="text-xs">Your gateway to viral content ideas • Powered by Google Trends Kenya</p>
         </div>
     </div>
 
@@ -230,7 +230,7 @@
                 </span>
             `;
             btn.disabled = true;
-            status.textContent = 'Connecting to trend networks...';
+            status.textContent = 'Scraping Google Trends Kenya...';
 
             try {
                 const response = await fetch('/api/trends');
@@ -239,7 +239,11 @@
                 if (data.success) {
                     trendsData = data;
                     displayTrends();
-                    status.textContent = `Fresh trends loaded • ${new Date().toLocaleTimeString('en-US', { timeZone: 'Africa/Nairobi' })} • Click to copy`;
+                    const timeString = new Date().toLocaleTimeString('en-US', { 
+                        timeZone: 'Africa/Nairobi',
+                        hour12: true 
+                    });
+                    status.textContent = `Fresh Kenya trends loaded • ${timeString} EAT • Click to copy`;
                 } else {
                     status.textContent = `Error: ${data.error}`;
                 }
@@ -257,11 +261,11 @@
         }
 
         function displayTrends() {
-            const categories = ['kenya', 'worldwide', 'xtrends', 'news', 'technology', 'entertainment', 'sports', 'lifestyle', 'business', 'health', 'science', 'fashion'];
+            const categories = ['kenya', 'worldwide', 'googletrends', 'news', 'technology', 'entertainment', 'sports', 'lifestyle', 'business', 'health', 'science', 'fashion'];
             const icons = [
                 'https://flagcdn.com/144x108/ke.svg', // Kenya
                 'https://www.svgrepo.com/download/513373/rocket.svg', // Worldwide
-                'https://www.svgrepo.com/download/353140/twitter.svg', // X Trends
+                'https://www.svgrepo.com/download/388821/trending-up.svg', // Google Trends
                 'https://www.svgrepo.com/download/302554/star.svg', // News
                 'https://www.svgrepo.com/download/381643/flame.svg', // Technology
                 'https://www.svgrepo.com/download/354162/football.svg', // Entertainment
