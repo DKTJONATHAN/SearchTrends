@@ -39,9 +39,9 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // Scrape Google Trends for specific regions
-async function scrapeGoogleTrends(region = 'KE', category = '') {
+async function scrapeGoogleTrends(region = 'KE') {
     try {
-        let url = `https://trends.google.com/trends/trendingsearches/daily?geo=${region}&hl=en`;
+        const url = `https://trends.google.com/trends/trendingsearches/daily?geo=${region}&hl=en`;
         
         const response = await axios.get(url, {
             timeout: 10000,
@@ -79,24 +79,18 @@ async function scrapeGoogleTrends(region = 'KE', category = '') {
             if (trends.length >= 10) break;
         }
 
-        // If no trends found, try alternative approach - RSS feed
-        if (trends.length === 0) {
-            return await scrapeGoogleTrendsRSS(region);
-        }
-
         logger.info(`Scraped ${trends.length} trends for ${region}`);
         return trends.slice(0, 10);
 
     } catch (error) {
         logger.error(`Google Trends scraping failed for ${region}: ${error.message}`);
-        return await scrapeGoogleTrendsRSS(region);
+        return [];
     }
 }
 
-// Alternative method using Google Trends RSS feed
-async function scrapeGoogleTrendsRSS(region = 'KE') {
+// Fetch RSS feeds from various sources
+async function fetchRSSFeed(url, feedName) {
     try {
-        const url = `https://trends.google.com/trends/trendingsearches/daily/rss?geo=${region}`;
         const response = await axios.get(url, {
             timeout: 8000,
             headers: {
@@ -107,55 +101,51 @@ async function scrapeGoogleTrendsRSS(region = 'KE') {
         const xml = response.data;
         const trends = [];
         
-        // Extract titles from CDATA sections
+        // Extract titles from RSS feeds
         const titleRegex = /<title><!\[CDATA\[(.*?)\]\]><\/title>/g;
+        const simpleTitleRegex = /<title>(.*?)<\/title>/g;
+        
         let match;
         
+        // Try CDATA format first
         while ((match = titleRegex.exec(xml)) !== null) {
             const title = match[1].trim();
-            if (title && 
-                title !== 'Daily Search Trends' && 
-                title !== `Trending searches in ${region}` &&
-                title.length > 2 && 
-                title.length < 60 &&
-                !trends.includes(title)) {
+            if (title && title.length > 3 && title.length < 80 && !trends.includes(title)) {
                 trends.push(title);
             }
         }
         
-        // Also try description extraction
-        const descRegex = /<description><!\[CDATA\[(.*?)\]\]><\/description>/g;
-        while ((match = descRegex.exec(xml)) !== null) {
-            const desc = match[1].trim();
-            if (desc && desc.length > 5 && desc.length < 60 && !trends.includes(desc)) {
-                trends.push(desc);
+        // Try simple title format if no CDATA found
+        if (trends.length === 0) {
+            while ((match = simpleTitleRegex.exec(xml)) !== null) {
+                const title = match[1].trim();
+                if (title && 
+                    title !== feedName &&
+                    !title.includes('RSS') &&
+                    title.length > 3 && 
+                    title.length < 80 && 
+                    !trends.includes(title)) {
+                    trends.push(title);
+                }
             }
         }
 
-        logger.info(`Extracted ${trends.length} trends from RSS for ${region}`);
+        logger.info(`Fetched ${trends.length} items from ${feedName} RSS`);
         return trends.slice(0, 10);
 
     } catch (error) {
-        logger.error(`Google Trends RSS failed for ${region}: ${error.message}`);
-        
-        // Country-specific trending topics as final fallback
-        const countryTrends = {
-            'KE': ['Safaricom', 'M-Pesa', 'Nairobi', 'William Ruto', 'KCSE Results', 'Kenya Airways', 'Tusker', 'KCB', 'Equity Bank', 'Maasai Mara'],
-            'US': ['Donald Trump', 'Taylor Swift', 'NFL', 'iPhone', 'ChatGPT', 'Netflix', 'Amazon', 'Tesla', 'Google', 'YouTube'],
-            'default': ['Technology', 'Entertainment', 'Sports', 'News', 'Health', 'Science', 'Business', 'Fashion', 'Travel', 'Food']
-        };
-        
-        return countryTrends[region] || countryTrends['default'];
+        logger.error(`RSS feed failed for ${feedName}: ${error.message}`);
+        return [];
     }
 }
 
-// Fetch NewsAPI topics with Google Trends fallback
+// Fetch NewsAPI topics (no fallbacks)
 async function getNewsTopics(category, categoryName) {
     try {
         const apiKey = process.env.NEWSAPI_KEY;
         if (!apiKey) {
-            logger.warn(`NEWSAPI_KEY not configured for ${categoryName}, using Google Trends`);
-            return await scrapeGoogleTrends('US');
+            logger.error(`NEWSAPI_KEY not configured for ${categoryName}`);
+            return [];
         }
         
         const response = await axios.get(`https://newsapi.org/v2/top-headlines`, {
@@ -177,19 +167,16 @@ async function getNewsTopics(category, categoryName) {
                 .filter(title => title && title.length > 5 && title.length < 80)
                 .slice(0, 10);
             
-            if (trends.length > 0) {
-                logger.info(`NewsAPI returned ${trends.length} trends for ${categoryName}`);
-                return trends;
-            }
+            logger.info(`NewsAPI returned ${trends.length} trends for ${categoryName}`);
+            return trends;
         }
         
-        // Fallback to Google Trends
-        logger.info(`NewsAPI returned no results for ${categoryName}, using Google Trends`);
-        return await scrapeGoogleTrends('US');
+        logger.warn(`NewsAPI returned no articles for ${categoryName}`);
+        return [];
         
     } catch (error) {
-        logger.error(`NewsAPI failed for ${categoryName}: ${error.message}, falling back to Google Trends`);
-        return await scrapeGoogleTrends('US');
+        logger.error(`NewsAPI failed for ${categoryName}: ${error.message}`);
+        return [];
     }
 }
 
@@ -201,8 +188,8 @@ app.get('/api/health', (req, res) => {
             message: 'TrendScope server running',
             timestamp: new Date().toISOString(),
             environment: process.env.NODE_ENV || 'development',
-            data_sources: ['NewsAPI', 'Google Trends Scraping'],
-            regions: ['Kenya (KE)', 'Worldwide (US)', 'Custom categories']
+            data_sources: ['NewsAPI', 'Google Trends Scraping', 'RSS Feeds'],
+            no_fallbacks: true
         });
     } catch (error) {
         logger.error(`Health check failed: ${error.message}`);
@@ -233,11 +220,11 @@ app.get('/api/trends', async (req, res) => {
             { key: 'technology', code: 'technology', name: 'Technology', type: 'news' },
             { key: 'entertainment', code: 'entertainment', name: 'Entertainment', type: 'news' },
             { key: 'sports', code: 'sports', name: 'Sports', type: 'news' },
-            { key: 'lifestyle', code: 'health', name: 'Lifestyle', type: 'news' },
+            { key: 'lifestyle', url: 'https://feeds.bbci.co.uk/news/health/rss.xml', name: 'Lifestyle', type: 'rss' },
             { key: 'business', code: 'business', name: 'Business', type: 'news' },
-            { key: 'health', code: 'health', name: 'Health', type: 'news' },
-            { key: 'science', code: 'science', name: 'Science', type: 'news' },
-            { key: 'fashion', code: 'entertainment', name: 'Fashion', type: 'news' }
+            { key: 'health', url: 'https://feeds.bbci.co.uk/news/health/rss.xml', name: 'Health', type: 'rss' },
+            { key: 'science', url: 'https://feeds.bbci.co.uk/news/science_and_environment/rss.xml', name: 'Science', type: 'rss' },
+            { key: 'fashion', url: 'https://www.vogue.com/feed/rss', name: 'Fashion', type: 'rss' }
         ];
 
         const results = {};
@@ -249,12 +236,15 @@ app.get('/api/trends', async (req, res) => {
                     trends = await scrapeGoogleTrends(category.region);
                 } else if (category.type === 'news') {
                     trends = await getNewsTopics(category.code, category.name);
+                } else if (category.type === 'rss') {
+                    trends = await fetchRSSFeed(category.url, category.name);
                 }
                 
-                results[category.key] = trends.length ? trends : await scrapeGoogleTrends('US');
+                results[category.key] = trends;
+                logger.info(`${category.name}: ${trends.length} trends fetched`);
             } catch (error) {
                 logger.error(`Error fetching ${category.name}: ${error.message}`);
-                results[category.key] = await scrapeGoogleTrends('US');
+                results[category.key] = [];
             }
         });
 
@@ -265,8 +255,14 @@ app.get('/api/trends', async (req, res) => {
             success: true,
             timestamp: new Date().toISOString(),
             cached: false,
-            data_source: 'NewsAPI + Google Trends Scraping',
-            regions: { kenya: 'KE', worldwide: 'US' },
+            data_sources: {
+                kenya: 'Google Trends KE',
+                worldwide: 'Google Trends US', 
+                googletrends: 'Google Trends US',
+                news_categories: 'NewsAPI',
+                rss_feeds: ['BBC Health', 'BBC Science', 'Vogue Fashion']
+            },
+            no_fallbacks: true,
             ...results
         };
 
@@ -277,37 +273,10 @@ app.get('/api/trends', async (req, res) => {
         res.status(200).json(response);
     } catch (error) {
         logger.error(`Critical error in /api/trends: ${error.message}`);
-        
-        // Final fallback
-        try {
-            const fallbackTrends = await scrapeGoogleTrends('US');
-            const fallbackResponse = {
-                success: true,
-                timestamp: new Date().toISOString(),
-                cached: false,
-                emergency_fallback: true,
-                kenya: await scrapeGoogleTrends('KE'),
-                worldwide: fallbackTrends,
-                googletrends: fallbackTrends,
-                news: fallbackTrends,
-                technology: fallbackTrends,
-                entertainment: fallbackTrends,
-                sports: fallbackTrends,
-                lifestyle: fallbackTrends,
-                business: fallbackTrends,
-                health: fallbackTrends,
-                science: fallbackTrends,
-                fashion: fallbackTrends
-            };
-            
-            res.status(200).json(fallbackResponse);
-        } catch (fallbackError) {
-            logger.error(`All data sources failed: ${fallbackError.message}`);
-            res.status(500).json({
-                success: false,
-                error: 'All trend sources unavailable'
-            });
-        }
+        res.status(500).json({
+            success: false,
+            error: 'Trend fetching failed - no fallback data available'
+        });
     }
 });
 
@@ -324,13 +293,12 @@ app.get('/api/export', async (req, res) => {
         }
 
         const records = Object.entries(trends)
-            .filter(([key]) => !['success', 'timestamp', 'cached', 'data_source', 'regions', 'emergency_fallback'].includes(key))
+            .filter(([key]) => !['success', 'timestamp', 'cached', 'data_sources', 'no_fallbacks'].includes(key))
             .flatMap(([category, keywords]) => {
                 if (Array.isArray(keywords)) {
                     return keywords.map(keyword => ({ 
                         category: category.charAt(0).toUpperCase() + category.slice(1), 
-                        keyword: keyword.replace(/,/g, ';'),
-                        source: trends.emergency_fallback ? 'Google Trends Emergency' : 'Live Data'
+                        keyword: keyword.replace(/,/g, ';')
                     }));
                 }
                 return [];
@@ -344,14 +312,14 @@ app.get('/api/export', async (req, res) => {
         }
 
         const csv = [
-            'Category,Keyword,Source,Timestamp',
+            'Category,Keyword,Timestamp',
             ...records.map(record => 
-                `"${record.category}","${record.keyword}","${record.source}","${trends.timestamp}"`
+                `"${record.category}","${record.keyword}","${trends.timestamp}"`
             )
         ].join('\n');
 
         res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', 'attachment; filename="trendscope-kenya-trends.csv"');
+        res.setHeader('Content-Disposition', 'attachment; filename="trendscope-live-trends.csv"');
         res.status(200).send(csv);
         
         logger.info(`CSV export generated with ${records.length} records`);
@@ -369,11 +337,11 @@ app.get('/api/health', (req, res) => {
     try {
         res.status(200).json({
             success: true,
-            message: 'TrendScope Kenya server running',
+            message: 'TrendScope server running - No fallbacks',
             timestamp: new Date().toISOString(),
             environment: process.env.NODE_ENV || 'development',
-            data_sources: ['NewsAPI', 'Google Trends Kenya Scraping'],
-            features: ['Kenya trends', 'Global trends', 'News categories', 'CSV export']
+            data_sources: ['NewsAPI Only', 'Google Trends Scraping Only', 'RSS Feeds Only'],
+            policy: 'Real data or empty results - no fallbacks'
         });
     } catch (error) {
         logger.error(`Health check failed: ${error.message}`);
@@ -406,7 +374,7 @@ app.use((err, req, res, next) => {
 if (process.env.NODE_ENV !== 'production') {
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {
-        logger.info(`TrendScope Kenya server running on port ${PORT}`);
+        logger.info(`TrendScope server running on port ${PORT} - No fallbacks mode`);
     });
 }
 
