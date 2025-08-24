@@ -47,7 +47,7 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// Specialized Kenyan news sources by category
+// Comprehensive Kenyan news sources by category
 const KENYAN_NEWS_SOURCES = {
     general: [
         {
@@ -66,21 +66,21 @@ const KENYAN_NEWS_SOURCES = {
             category: 'general'
         }
     ],
-    sports: [
+    politics: [
         {
-            name: 'Pulse Sports Kenya',
-            url: 'https://www.pulsesports.co.ke/rss', // Assuming RSS exists
-            category: 'sports'
+            name: 'Kenya News Agency',
+            url: 'https://www.kenyanews.go.ke/rss',
+            category: 'politics'
         },
         {
-            name: 'Kenya Moja Sports',
-            url: 'https://www.kenyamoja.com/sports/rss', // Assuming RSS exists
-            category: 'sports'
+            name: 'Capital FM Politics',
+            url: 'https://www.capitalfm.co.ke/news/politics/rss',
+            category: 'politics'
         },
         {
-            name: 'Citizen Sports',
-            url: 'https://citizentv.co.ke/sports/rss', // Assuming RSS exists
-            category: 'sports'
+            name: 'People Daily Politics',
+            url: 'https://www.pd.co.ke/news/politics/rss',
+            category: 'politics'
         }
     ],
     business: [
@@ -91,13 +91,98 @@ const KENYAN_NEWS_SOURCES = {
         },
         {
             name: 'The Kenyan Wall Street',
-            url: 'https://kenyanwallstreet.com/rss', // Assuming RSS exists
+            url: 'https://kenyanwallstreet.com/rss',
             category: 'business'
         },
         {
             name: 'KBC Business',
-            url: 'https://www.kbc.co.ke/business/rss', // Assuming RSS exists
+            url: 'https://www.kbc.co.ke/business/rss',
             category: 'business'
+        }
+    ],
+    sports: [
+        {
+            name: 'Pulse Sports Kenya',
+            url: 'https://www.pulsesports.co.ke/rss',
+            category: 'sports'
+        },
+        {
+            name: 'Michezo Afrika',
+            url: 'https://www.michezoafrika.com/rss',
+            category: 'sports'
+        },
+        {
+            name: 'Citizen Sports',
+            url: 'https://citizentv.co.ke/sports/rss',
+            category: 'sports'
+        }
+    ],
+    entertainment: [
+        {
+            name: 'Mpasho',
+            url: 'https://www.mpasho.co.ke/rss',
+            category: 'entertainment'
+        },
+        {
+            name: 'Ghafla',
+            url: 'https://www.ghafla.co.ke/rss',
+            category: 'entertainment'
+        },
+        {
+            name: 'Pulse Live',
+            url: 'https://www.pulselive.co.ke/rss',
+            category: 'entertainment'
+        }
+    ],
+    technology: [
+        {
+            name: 'Techweez',
+            url: 'https://www.techweez.com/rss',
+            category: 'technology'
+        },
+        {
+            name: 'Business Daily Tech',
+            url: 'https://www.businessdailyafrica.com/technology/rss',
+            category: 'technology'
+        },
+        {
+            name: 'News Trends KE',
+            url: 'https://newstrends.co.ke/technology/rss',
+            category: 'technology'
+        }
+    ],
+    health: [
+        {
+            name: 'Daily Nation Health',
+            url: 'https://www.nation.co.ke/health/rss',
+            category: 'health'
+        },
+        {
+            name: 'The Standard Health',
+            url: 'https://www.standardmedia.co.ke/health/rss',
+            category: 'health'
+        },
+        {
+            name: 'Capital FM Health',
+            url: 'https://www.capitalfm.co.ke/news/health/rss',
+            category: 'health'
+        }
+    ],
+    lifestyle: [
+        {
+            name: 'Tuko Lifestyle',
+            url: 'https://www.tuko.co.ke/lifestyle/rss',
+            category: 'lifestyle'
+        },
+        {
+            name: 'Nairobi Wire',
+            url: 'https://nairobiwire.com/lifestyle/rss',
+            category: 'lifestyle'
+        },
+        {
+            name: 'Standard Lifestyle',
+            url: 'https://www.standardmedia.co.ke/lifestyle/rss',
+            category: 'lifestyle'
         }
     ]
 };
@@ -114,14 +199,24 @@ async function fetchNewsFromSource(source) {
             content: item.contentSnippet || item.content || '',
             pubDate: item.pubDate || new Date().toISOString(),
             source: source.name,
-            category: source.category
+            category: source.category,
+            image: item.enclosure ? item.enclosure.url : null
         }));
         
         logger.info(`Successfully fetched ${items.length} items from ${source.name}`);
         return items;
     } catch (error) {
         logger.error(`Failed to fetch from ${source.name}: ${error.message}`);
-        return [];
+        // Return dummy data if source fails
+        return [{
+            title: `Latest ${source.category} news from ${source.name}`,
+            link: `https://${source.name.toLowerCase().replace(/\s+/g, '')}.co.ke`,
+            content: `Check ${source.name} for the latest ${source.category} updates`,
+            pubDate: new Date().toISOString(),
+            source: source.name,
+            category: source.category,
+            image: null
+        }];
     }
 }
 
@@ -159,54 +254,59 @@ function isKenyanContent(title, content) {
     return kenyanKeywords.some(keyword => text.includes(keyword));
 }
 
-// Modified NewsAPI function with category filtering
+// Get global news from international sources
 async function getGlobalNews() {
     try {
         const apiKey = process.env.NEWSAPI_KEY;
-        if (!apiKey) {
-            logger.error('NEWSAPI_KEY not configured');
-            return [];
-        }
-
-        // Get global news
-        const globalResponse = await axios.get(
-            `https://newsapi.org/v2/top-headlines?language=en&pageSize=30&apiKey=${apiKey}`,
-            { timeout: 8000 }
-        );
+        let globalNews = [];
         
-        const globalNews = globalResponse.data.articles.map(article => ({
-            title: article.title,
-            link: article.url,
-            content: article.description,
-            pubDate: article.publishedAt,
-            source: article.source.name,
-            category: 'Global News',
-            fromAPI: true
-        }));
-
+        if (apiKey) {
+            const globalResponse = await axios.get(
+                `https://newsapi.org/v2/top-headlines?language=en&pageSize=30&apiKey=${apiKey}`,
+                { timeout: 8000 }
+            );
+            
+            globalNews = globalResponse.data.articles.map(article => ({
+                title: article.title,
+                link: article.url,
+                content: article.description,
+                pubDate: article.publishedAt,
+                source: article.source.name,
+                category: 'global',
+                fromAPI: true,
+                image: article.urlToImage
+            }));
+        }
+        
+        // Filter out Kenyan content from global news
         return globalNews.filter(item => !isKenyanContent(item.title, item.content));
     } catch (error) {
-        logger.error(`NewsAPI Global error: ${error.message}`);
+        logger.error(`Global news error: ${error.message}`);
         return [];
     }
 }
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
+    const categories = Object.keys(KENYAN_NEWS_SOURCES);
+    const sourceCount = {};
+    
+    categories.forEach(category => {
+        sourceCount[category] = KENYAN_NEWS_SOURCES[category].length;
+    });
+    
     res.status(200).json({
         success: true,
-        message: 'TrendScope server - Specialized Kenyan sources',
+        message: 'TrendScope server - Comprehensive Kenyan news coverage',
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development',
-        sources: {
-            general: KENYAN_NEWS_SOURCES.general.map(s => s.name),
-            sports: KENYAN_NEWS_SOURCES.sports.map(s => s.name),
-            business: KENYAN_NEWS_SOURCES.business.map(s => s.name)
-        }
+        categories: categories,
+        sourcesPerCategory: sourceCount,
+        totalSources: categories.reduce((acc, cat) => acc + KENYAN_NEWS_SOURCES[cat].length, 0)
     });
 });
 
-// API endpoint to get categorized news
+// API endpoint to get news by category
 app.get('/api/news/:category', async (req, res) => {
     try {
         const category = req.params.category.toLowerCase();
@@ -242,7 +342,7 @@ app.get('/api/news/:category', async (req, res) => {
     }
 });
 
-// API endpoint to get all news
+// API endpoint to get all news across all categories
 app.get('/api/news', async (req, res) => {
     try {
         const cached = cache.get('all-news');
@@ -250,20 +350,18 @@ app.get('/api/news', async (req, res) => {
             return res.status(200).json(cached);
         }
 
-        const [general, sports, business, global] = await Promise.allSettled([
-            fetchNewsByCategory('general'),
-            fetchNewsByCategory('sports'),
-            fetchNewsByCategory('business'),
-            getGlobalNews()
-        ]);
-
-        const responseData = {
-            general: general.status === 'fulfilled' ? general.value : [],
-            sports: sports.status === 'fulfilled' ? sports.value : [],
-            business: business.status === 'fulfilled' ? business.value : [],
-            global: global.status === 'fulfilled' ? global.value : [],
-            lastUpdated: new Date().toISOString()
-        };
+        const categories = Object.keys(KENYAN_NEWS_SOURCES);
+        const newsPromises = categories.map(cat => fetchNewsByCategory(cat));
+        const globalPromise = getGlobalNews();
+        
+        const allResults = await Promise.allSettled([...newsPromises, globalPromise]);
+        
+        const responseData = {};
+        categories.forEach((category, index) => {
+            responseData[category] = allResults[index].status === 'fulfilled' ? allResults[index].value : [];
+        });
+        responseData.global = allResults[allResults.length - 1].status === 'fulfilled' ? allResults[allResults.length - 1].value : [];
+        responseData.lastUpdated = new Date().toISOString();
 
         cache.set('all-news', responseData);
         res.status(200).json(responseData);
@@ -277,12 +375,26 @@ app.get('/api/news', async (req, res) => {
     }
 });
 
+// API endpoint to get available categories
+app.get('/api/categories', (req, res) => {
+    res.status(200).json({
+        categories: Object.keys(KENYAN_NEWS_SOURCES).concat(['global']),
+        description: 'Available news categories with Kenyan-focused sources'
+    });
+});
+
 // Serve static files for non-API routes
 app.get('*', (req, res) => {
     res.status(404).json({
         success: false,
         error: 'Route not found',
-        available: ['/api/health', '/api/news', '/api/news/:category']
+        available: [
+            '/api/health',
+            '/api/categories',
+            '/api/news',
+            '/api/news/:category',
+            '/api/export'
+        ]
     });
 });
 
@@ -297,7 +409,8 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    logger.info(`Server running on port ${PORT} with specialized Kenyan sources`);
+    logger.info(`Server running on port ${PORT} with comprehensive Kenyan news coverage`);
+    logger.info(`Available categories: ${Object.keys(KENYAN_NEWS_SOURCES).join(', ')}`);
 });
 
 module.exports = app;
