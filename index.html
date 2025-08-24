@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TrendScope - Discover Viral Content Trends</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         
@@ -21,11 +21,6 @@
             font-family: 'Inter', sans-serif;
             background: linear-gradient(to bottom, var(--darker), var(--dark));
             min-height: 100vh;
-        }
-        
-        .container { 
-            max-width: 100%; 
-            overflow-x: hidden; 
         }
         
         .trend-card {
@@ -78,22 +73,18 @@
         .category-science { border-left: 4px solid #22d3ee; }
         .category-fashion { border-left: 4px solid #f43f5e; }
         
-        @media (max-width: 640px) {
-            .container { padding-left: 1rem; padding-right: 1rem; }
-            .trend-card { width: 100%; }
-            h1 { font-size: 2.5rem; }
-            .header-icon { width: 4rem; height: 4rem; }
-        }
-        
-        .staggered-item {
-            opacity: 0;
-        }
-        
         .gradient-text {
             background: linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+        }
+        
+        @media (max-width: 640px) {
+            .container { padding-left: 1rem; padding-right: 1rem; }
+            .trend-card { width: 100%; }
+            h1 { font-size: 2.5rem; }
+            .header-icon { width: 4rem; height: 4rem; }
         }
     </style>
 </head>
@@ -147,24 +138,6 @@
         </div>
     </div>
 
-    <!-- Filter Section -->
-    <div class="container mx-auto px-4 mb-8 hidden" id="filterSection">
-        <div class="bg-gray-800/50 rounded-lg p-4 backdrop-blur-sm border border-gray-700/30">
-            <div class="flex flex-col sm:flex-row items-center justify-between">
-                <h3 class="text-lg font-medium text-white mb-2 sm:mb-0">
-                    <i class="fas fa-filter mr-2 text-indigo-400"></i>Filter Categories
-                </h3>
-                <div class="flex flex-wrap gap-2 justify-center">
-                    <button class="filter-btn px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-md" data-category="all">All</button>
-                    <button class="filter-btn px-3 py-1.5 bg-gray-700 text-gray-300 text-sm rounded-md" data-category="kenya">Kenya</button>
-                    <button class="filter-btn px-3 py-1.5 bg-gray-700 text-gray-300 text-sm rounded-md" data-category="worldwide">Worldwide</button>
-                    <button class="filter-btn px-3 py-1.5 bg-gray-700 text-gray-300 text-sm rounded-md" data-category="news">News</button>
-                    <button class="filter-btn px-3 py-1.5 bg-gray-700 text-gray-300 text-sm rounded-md" data-category="technology">Tech</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Trends Grid -->
     <div class="container mx-auto px-4 pb-20">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" id="trendsContainer">
@@ -175,9 +148,7 @@
                         <h2 class="text-xl font-semibold text-white mb-1">Kenya</h2>
                         <p class="text-xs text-gray-400">Trending in Kenya</p>
                     </div>
-                    <div class="w-10 h-7 bg-white rounded-sm shadow flex items-center justify-center overflow-hidden">
-                        <img src="https://flagcdn.com/144x108/ke.svg" alt="Kenya Flag" class="w-full h-full object-cover">
-                    </div>
+                    <i class="fas fa-flag text-red-400 text-2xl"></i>
                 </div>
                 <div class="p-5">
                     <div id="kenya" class="space-y-3">
@@ -227,7 +198,6 @@
                 </div>
             </div>
 
-            <!-- Additional categories with similar structure -->
             <!-- News -->
             <div class="trend-card category-news bg-gray-800/70 rounded-lg overflow-hidden border border-gray-700/30 backdrop-blur-sm">
                 <div class="bg-gradient-to-r from-emerald-600/20 to-gray-900/70 p-5 flex items-center justify-between">
@@ -285,9 +255,119 @@
                 </div>
             </div>
 
-            <!-- Additional categories would follow the same pattern -->
-            <!-- Only showing a few for brevity -->
-            
+            <!-- Sports -->
+            <div class="trend-card category-sports bg-gray-800/70 rounded-lg overflow-hidden border border-gray-700/30 backdrop-blur-sm">
+                <div class="bg-gradient-to-r from-orange-600/20 to-gray-900/70 p-5 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-semibold text-white mb-1">Sports</h2>
+                        <p class="text-xs text-gray-400">Games & Athletes</p>
+                    </div>
+                    <i class="fas fa-basketball-ball text-orange-400 text-2xl"></i>
+                </div>
+                <div class="p-5">
+                    <div id="sports" class="space-y-3">
+                        <div class="text-center text-gray-500 py-8 text-sm">
+                            <i class="fas fa-basketball-ball text-2xl mb-2 opacity-50"></i>
+                            <p>No data yet</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lifestyle -->
+            <div class="trend-card category-lifestyle bg-gray-800/70 rounded-lg overflow-hidden border border-gray-700/30 backdrop-blur-sm">
+                <div class="bg-gradient-to-r from-cyan-600/20 to-gray-900/70 p-5 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-semibold text-white mb-1">Lifestyle</h2>
+                        <p class="text-xs text-gray-400">Trends & Wellness</p>
+                    </div>
+                    <i class="fas fa-heart text-cyan-400 text-2xl"></i>
+                </div>
+                <div class="p-5">
+                    <div id="lifestyle" class="space-y-3">
+                        <div class="text-center text-gray-500 py-8 text-sm">
+                            <i class="fas fa-heart text-2xl mb-2 opacity-50"></i>
+                            <p>No data yet</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Business -->
+            <div class="trend-card category-business bg-gray-800/70 rounded-lg overflow-hidden border border-gray-700/30 backdrop-blur-sm">
+                <div class="bg-gradient-to-r from-lime-600/20 to-gray-900/70 p-5 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-semibold text-white mb-1">Business</h2>
+                        <p class="text-xs text-gray-400">Markets & Startups</p>
+                    </div>
+                    <i class="fas fa-chart-line text-lime-400 text-2xl"></i>
+                </div>
+                <div class="p-5">
+                    <div id="business" class="space-y-3">
+                        <div class="text-center text-gray-500 py-8 text-sm">
+                            <i class="fas fa-chart-line text-2xl mb-2 opacity-50"></i>
+                            <p>No data yet</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Health -->
+            <div class="trend-card category-health bg-gray-800/70 rounded-lg overflow-hidden border border-gray-700/30 backdrop-blur-sm">
+                <div class="bg-gradient-to-r from-fuchsia-600/20 to-gray-900/70 p-5 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-semibold text-white mb-1">Health</h2>
+                        <p class="text-xs text-gray-400">Wellness & Medicine</p>
+                    </div>
+                    <i class="fas fa-heartbeat text-fuchsia-400 text-2xl"></i>
+                </div>
+                <div class="p-5">
+                    <div id="health" class="space-y-3">
+                        <div class="text-center text-gray-500 py-8 text-sm">
+                            <i class="fas fa-heartbeat text-2xl mb-2 opacity-50"></i>
+                            <p>No data yet</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Science -->
+            <div class="trend-card category-science bg-gray-800/70 rounded-lg overflow-hidden border border-gray-700/30 backdrop-blur-sm">
+                <div class="bg-gradient-to-r from-cyan-300/20 to-gray-900/70 p-5 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-semibold text-white mb-1">Science</h2>
+                        <p class="text-xs text-gray-400">Discoveries & Research</p>
+                    </div>
+                    <i class="fas fa-flask text-cyan-300 text-2xl"></i>
+                </div>
+                <div class="p-5">
+                    <div id="science" class="space-y-3">
+                        <div class="text-center text-gray-500 py-8 text-sm">
+                            <i class="fas fa-flask text-2xl mb-2 opacity-50"></i>
+                            <p>No data yet</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fashion -->
+            <div class="trend-card category-fashion bg-gray-800/70 rounded-lg overflow-hidden border border-gray-700/30 backdrop-blur-sm">
+                <div class="bg-gradient-to-r from-rose-600/20 to-gray-900/70 p-5 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-semibold text-white mb-1">Fashion</h2>
+                        <p class="text-xs text-gray-400">Style & Trends</p>
+                    </div>
+                    <i class="fas fa-tshirt text-rose-400 text-2xl"></i>
+                </div>
+                <div class="p-5">
+                    <div id="fashion" class="space-y-3">
+                        <div class="text-center text-gray-500 py-8 text-sm">
+                            <i class="fas fa-tshirt text-2xl mb-2 opacity-50"></i>
+                            <p>No data yet</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -303,19 +383,11 @@
         let trendsData = {};
         let autoRefreshInterval;
         let isAutoRefreshOn = true;
-        let currentFilter = 'all';
 
         // Initialize the page
         document.addEventListener('DOMContentLoaded', function() {
             // Start with auto-refresh
             startAutoRefresh();
-            
-            // Set up filter buttons
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    filterCategories(this.dataset.category);
-                });
-            });
             
             // Load initial data
             fetchTrends();
@@ -378,14 +450,61 @@
                         minute: '2-digit'
                     });
                     status.innerHTML = `<i class="fas fa-check-circle text-green-400 mr-2"></i> Fresh Kenya trends loaded • ${timeString} EAT • Click to copy`;
-                    
-                    // Show filter section after first load
-                    document.getElementById('filterSection').classList.remove('hidden');
                 } else {
                     status.innerHTML = `<i class="fas fa-exclamation-circle text-red-400 mr-2"></i> Error: ${data.error}`;
                 }
             } catch (error) {
                 status.innerHTML = '<i class="fas fa-exclamation-triangle text-red-400 mr-2"></i> Connection failed - check your server';
+                
+                // Demo data for testing if server is down
+                trendsData = {
+                    success: true,
+                    timestamp: new Date().toISOString(),
+                    cached: false,
+                    kenya: [
+                        "Elections 2023 updates",
+                        "Maize shortage crisis",
+                        "New Nairobi expressway",
+                        "MPs salary increase debate",
+                        "Flood alerts in coastal region"
+                    ],
+                    worldwide: [
+                        "Climate change summit",
+                        "Stock market trends",
+                        "Ukraine conflict updates",
+                        "World Cup preparations",
+                        "NASA Mars mission"
+                    ],
+                    googletrends: [
+                        "AI image generators",
+                        "Wordle strategies",
+                        "NFT market trends",
+                        "Metaverse developments",
+                        "ChatGPT latest features"
+                    ],
+                    news: [
+                        "Breaking: Major trade agreement signed",
+                        "Political scandal unfolds",
+                        "Economic indicators report",
+                        "International diplomacy news",
+                        "Technology sector mergers"
+                    ],
+                    technology: [
+                        "New iPhone features leaked",
+                        "Windows 12 preview",
+                        "AI assistant advancements",
+                        "5G network expansion",
+                        "Cybersecurity threats"
+                    ],
+                    entertainment: [
+                        "New Marvel movie announcement",
+                        "Celebrity relationship news",
+                        "Music award winners",
+                        "Streaming service content",
+                        "Video game releases"
+                    ]
+                };
+                displayTrends();
             }
 
             progressBar.style.width = '100%';
@@ -453,7 +572,7 @@
                     // Add slight delay for staggered animation
                     const delay = i * 0.05;
                     return `
-                    <div class="staggered-item trend-item flex items-center justify-between p-3 bg-gray-900/50 hover:bg-gray-700/50 rounded-md cursor-pointer transition-all duration-300 border border-gray-700/30" 
+                    <div class="trend-item flex items-center justify-between p-3 bg-gray-900/50 hover:bg-gray-700/50 rounded-md cursor-pointer transition-all duration-300 border border-gray-700/30" 
                          onclick="selectTrend('${trend.replace(/'/g, "\\'")}')"
                          style="animation-delay: ${delay}s">
                         <div class="flex items-center flex-1 min-w-0">
@@ -468,50 +587,7 @@
                         <i class="${iconClass} ${colorClass}"></i>
                     </div>`;
                 }).join('');
-                
-                // Animate items with a delay
-                setTimeout(() => {
-                    const items = container.querySelectorAll('.staggered-item');
-                    items.forEach(item => {
-                        item.classList.add('fade-in');
-                    });
-                }, 100);
             });
-            
-            // Apply current filter after rendering
-            filterCategories(currentFilter);
-        }
-
-        function filterCategories(category) {
-            currentFilter = category;
-            
-            // Update active filter button
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                if (btn.dataset.category === category) {
-                    btn.classList.remove('bg-gray-700', 'text-gray-300');
-                    btn.classList.add('bg-indigo-600', 'text-white');
-                } else {
-                    btn.classList.remove('bg-indigo-600', 'text-white');
-                    btn.classList.add('bg-gray-700', 'text-gray-300');
-                }
-            });
-            
-            // Show/hide cards based on filter
-            const allCards = document.querySelectorAll('.trend-card');
-            
-            if (category === 'all') {
-                allCards.forEach(card => {
-                    card.style.display = 'block';
-                });
-            } else {
-                allCards.forEach(card => {
-                    if (card.querySelector('#' + category)) {
-                        card.style.display = 'block';
-                    } else {
-                        card.style.display = 'none';
-                    }
-                });
-            }
         }
 
         function selectTrend(trend) {
