@@ -1,5 +1,7 @@
 const express = require('express');
-const googleTrends = require('google-trends-api');
+const axios = require('axios');
+const cheerio = require('cheerio');
+const UserAgent = require('user-agents');
 const cors = require('cors');
 const path = require('path');
 
@@ -14,86 +16,127 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Function to get real trends data
-async function getRealTrends(countryCode, countryName) {
+// Function to scrape Google Trends directly
+async function scrapeTrends(countryCode, countryName) {
     try {
-        console.log(`🔍 Fetching real trends for ${countryName} (${countryCode})...`);
+        console.log(`🔍 Scraping trends for ${countryName}...`);
         
-        // Try different methods to get trends
-        
-        // Method 1: Daily Trends (most reliable)
-        try {
-            const trendsData = await googleTrends.dailyTrends({
-                trendDate: new Date(),
-                geo: countryCode,
-            });
+        const userAgent = new UserAgent();
+        const headers = {
+            'User-Agent': userAgent.toString(),
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate',
+            'Connection': 'keep-alive'
+        };
 
-            const parsed = JSON.parse(trendsData);
-            const trendingSearches = parsed.default?.trendingSearchesDays?.[0]?.trendingSearches;
-            
-            if (trendingSearches && trendingSearches.length > 0) {
-                const trends = trendingSearches
-                    .slice(0, 15)
-                    .map(trend => trend.title.query)
-                    .filter(title => title && title.length > 0);
-                
-                if (trends.length > 0) {
-                    console.log(`✅ Daily trends success for ${countryName}: ${trends.length} items`);
-                    return trends;
+        // Google Trends daily trends URL
+        const url = `https://trends.google.com/trends/trendingsearches/daily?geo=${countryCode}`;
+        
+        const response = await axios.get(url, { 
+            headers,
+            timeout: 15000,
+            maxRedirects: 5
+        });
+
+        const html = response.data;
+        const $ = cheerio.load(html);
+        
+        // Try to extract trending searches from the page
+        const trends = [];
+        
+        // Look for different possible selectors where trends might be
+        const selectors = [
+            '.trending-searches-item .title',
+            '.trending-search .title', 
+            '[data-ved] .title',
+            '.trending-searches .title',
+            '.search-item .title',
+            'h3',
+            '.title'
+        ];
+
+        for (const selector of selectors) {
+            $(selector).each((i, element) => {
+                const text = $(element).text().trim();
+                if (text && text.length > 0 && text.length < 100) {
+                    trends.push(text);
                 }
-            }
-        } catch (dailyError) {
-            console.log(`⚠️ Daily trends failed for ${countryName}:`, dailyError.message);
-        }
-
-        // Method 2: Real-time trends
-        try {
-            const realTimeData = await googleTrends.realTimeTrends({
-                geo: countryCode,
-                category: 'all'
             });
-
-            const parsed = JSON.parse(realTimeData);
-            let trends = [];
             
-            if (parsed.storySummaries?.trendingStories) {
-                trends = parsed.storySummaries.trendingStories
-                    .slice(0, 15)
-                    .map(story => story.title)
-                    .filter(title => title && title.length > 0);
-            }
-            
-            if (trends.length > 0) {
-                console.log(`✅ Real-time trends success for ${countryName}: ${trends.length} items`);
-                return trends;
-            }
-        } catch (realTimeError) {
-            console.log(`⚠️ Real-time trends failed for ${countryName}:`, realTimeError.message);
+            if (trends.length > 0) break;
         }
 
-        // Method 3: Interest over time for popular keywords (last resort)
-        try {
-            const popularKeywords = ['news', 'weather', 'sports', 'entertainment', 'technology'];
-            const keywordData = await googleTrends.interestOverTime({
-                keyword: popularKeywords,
-                geo: countryCode,
-                startTime: new Date(Date.now() - (7 * 24 * 60 * 60 * 1000)), // Last 7 days
-            });
-
-            const parsed = JSON.parse(keywordData);
-            if (parsed.default?.timelineData) {
-                // This won't give trending searches but confirms API is working
-                console.log(`📊 Interest data available for ${countryName}, but no trending searches found`);
-            }
-        } catch (interestError) {
-            console.log(`⚠️ Interest over time failed for ${countryName}:`, interestError.message);
+        // Remove duplicates and limit to 15
+        const uniqueTrends = [...new Set(trends)].slice(0, 15);
+        
+        if (uniqueTrends.length > 0) {
+            console.log(`✅ Found ${uniqueTrends.length} trends for ${countryName}`);
+            return uniqueTrends;
         }
 
-        console.log(`❌ No real trends data available for ${countryName}`);
+        console.log(`⚠️ No trends found in HTML for ${countryName}`);
         return [];
 
     } catch (error) {
-        console.error(`❌ All methods failed for ${countryName}:`, error.message);
+        console.error(`❌ Scraping failed for ${countryName}:`, error.message);
+        return [];
+    }
+}
+
+// Alternative: Use RSS feeds from Google News (more reliable)
+async function getNewsTopics(countryCode, countryName) {
+    try {
+        console.log(`📰 Getting news topics for ${countryName}...`);
+        
+        const userAgent = new UserAgent();
+        const headers = {
+            'User-Agent': userAgent.toString(),
+            'Accept': 'application/rss+xml, application/xml, text/xml'
+        };
+
+        // Google News RSS URLs for different countries
+        const rssUrls = {
+            'KE': 'https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRFZxYUdjU0FtVnVHZ0pMUlNnQVAB?hl=en-KE&gl=KE&ceid=KE:en',
+            'US': 'https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRFZxYUdjU0FtVnVHZ0pWVXlnQVAB?hl=en-US&gl=US&ceid=US:en',
+            'GB': 'https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRFZxYUdjU0FtVnVHZ0pIVWlnQVAB?hl=en-GB&gl=GB&ceid=GB:en'
+        };
+
+        const url = rssUrls[countryCode];
+        if (!url) return [];
+
+        const response = await axios.get(url, { 
+            headers,
+            timeout: 10000
+        });
+
+        const $ = cheerio.load(response.data, { xmlMode: true });
+        const topics = [];
+
+        $('item title').each((i, element) => {
+            const title = $(element).text().trim();
+            if (title && i < 15) {
+                // Extract main topic/keyword from news title
+                const cleanTitle = title
+                    .replace(/\s*-\s*.+$/, '') // Remove " - Source" 
+                    .replace(/^\w+:\s*/, '') // Remove "Breaking:" etc
+                    .trim();
+                
+                if (cleanTitle.length > 5 && cleanTitle.length < 60) {
+                    topics.push(cleanTitle);
+                }
+            }
+        });
+
+        if (topics.length > 0) {
+            console.log(`✅ Found ${topics.length} news topics for ${countryName}`);
+            return topics;
+        }
+
+        return [];
+
+    } catch (error) {
+        console.error(`❌ News topics failed for ${countryName}:`, error.message);
         return [];
     }
 }
@@ -101,7 +144,7 @@ async function getRealTrends(countryCode, countryName) {
 // API endpoint to get trends
 app.get('/api/trends', async (req, res) => {
     try {
-        console.log('🚀 Starting trends fetch...');
+        console.log('🚀 Starting real data fetch...');
         
         const countries = [
             { key: 'kenya', code: 'KE', name: 'Kenya' },
@@ -110,32 +153,40 @@ app.get('/api/trends', async (req, res) => {
         ];
 
         const results = {};
-        let hasData = false;
+        let totalFound = 0;
 
         for (const country of countries) {
-            const trends = await getRealTrends(country.code, country.name);
-            results[country.key] = trends;
+            console.log(`\n--- Processing ${country.name} ---`);
             
-            if (trends.length > 0) {
-                hasData = true;
+            // Try scraping first
+            let trends = await scrapeTrends(country.code, country.name);
+            
+            // If scraping fails, try news topics
+            if (trends.length === 0) {
+                trends = await getNewsTopics(country.code, country.name);
             }
-
-            // Wait between requests to avoid rate limiting
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            results[country.key] = trends;
+            totalFound += trends.length;
+            
+            // Wait between requests
+            await new Promise(resolve => setTimeout(resolve, 3000));
         }
 
-        if (!hasData) {
+        if (totalFound === 0) {
             return res.json({
                 success: false,
-                error: 'Unable to fetch real trends data from Google. This could be due to rate limiting, API changes, or temporary service issues. Please try again in a few minutes.'
+                error: 'Unable to fetch any real data. Google may be blocking requests or their structure has changed. This is a common issue with Google Trends scraping.'
             });
         }
 
-        console.log('✅ Trends fetch completed successfully');
+        console.log(`✅ Successfully found ${totalFound} total trends across all countries`);
         
         res.json({
             success: true,
             timestamp: new Date().toISOString(),
+            total_trends: totalFound,
+            method: 'web_scraping',
             ...results
         });
 
@@ -143,37 +194,22 @@ app.get('/api/trends', async (req, res) => {
         console.error('❌ Critical error:', error);
         res.json({
             success: false,
-            error: `Failed to connect to Google Trends API: ${error.message}`
+            error: `System error: ${error.message}`
         });
     }
 });
 
-// Test endpoint to verify API connectivity
-app.get('/api/test', async (req, res) => {
-    try {
-        // Test with a simple trends query
-        const testData = await googleTrends.dailyTrends({
-            trendDate: new Date(),
-            geo: 'US',
-        });
-        
-        res.json({
-            success: true,
-            message: 'Google Trends API is accessible',
-            timestamp: new Date().toISOString()
-        });
-    } catch (error) {
-        res.json({
-            success: false,
-            message: 'Google Trends API connection failed',
-            error: error.message,
-            timestamp: new Date().toISOString()
-        });
-    }
+// Health check
+app.get('/api/health', (req, res) => {
+    res.json({
+        success: true,
+        message: 'Server is running',
+        timestamp: new Date().toISOString()
+    });
 });
 
 app.listen(PORT, () => {
-    console.log(`🚀 Trends Platform running on http://localhost:${PORT}`);
-    console.log(`🧪 Test API connectivity: http://localhost:${PORT}/api/test`);
-    console.log(`📊 Real trends endpoint: http://localhost:${PORT}/api/trends`);
+    console.log(`🚀 Real Trends Platform running on http://localhost:${PORT}`);
+    console.log(`🔍 Using web scraping method for real Google data`);
+    console.log(`💡 This may take 10-15 seconds per request to avoid detection`);
 });
