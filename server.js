@@ -38,69 +38,80 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// Function to scrape Google Trends directly (from working version)
-async function scrapeTrends(countryCode, countryName) {
+// Function to get Google Trends using RSS (actually works)
+async function getGoogleTrendsRSS(countryCode, countryName) {
     try {
-        logger.info(`Scraping trends for ${countryName}...`);
+        logger.info(`Getting Google Trends RSS for ${countryName}...`);
         
         const headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Accept-Encoding': 'gzip, deflate',
-            'Connection': 'keep-alive'
+            'User-Agent': 'Mozilla/5.0 (compatible; TrendScope/1.0)',
+            'Accept': 'application/rss+xml, application/xml, text/xml'
         };
 
-        // Google Trends daily trends URL
-        const url = `https://trends.google.com/trends/trendingsearches/daily?geo=${countryCode}`;
+        // Google Trends RSS URLs (these actually work)
+        const url = `https://trends.google.com/trends/trendingsearches/daily/rss?geo=${countryCode}`;
         
         const response = await axios.get(url, { 
             headers,
-            timeout: 15000,
-            maxRedirects: 5
+            timeout: 10000
         });
 
-        const html = response.data;
-        const $ = cheerio.load(html);
-        
-        // Try to extract trending searches from the page
+        const $ = cheerio.load(response.data, { xmlMode: true });
         const trends = [];
-        
-        // Look for different possible selectors where trends might be
-        const selectors = [
-            '.trending-searches-item .title',
-            '.trending-search .title', 
-            '[data-ved] .title',
-            '.trending-searches .title',
-            '.search-item .title',
-            'h3',
-            '.title'
-        ];
 
-        for (const selector of selectors) {
-            $(selector).each((i, element) => {
-                const text = $(element).text().trim();
-                if (text && text.length > 0 && text.length < 100) {
-                    trends.push(text);
-                }
-            });
+        // Extract trending searches from RSS
+        $('item').each((i, element) => {
+            const title = $(element).find('title').text().trim();
+            const description = $(element).find('description').text().trim();
             
-            if (trends.length > 0) break;
+            if (title && title !== 'Daily Search Trends') {
+                trends.push(title);
+            }
+            
+            // Also extract from description if it contains search terms
+            if (description) {
+                // Parse description for search terms (Google includes them here)
+                const searchTerms = description.match(/(?:searches for|trending:|popular:)\s*([^,<.]+)/gi);
+                if (searchTerms) {
+                    searchTerms.forEach(term => {
+                        const cleanTerm = term.replace(/(?:searches for|trending:|popular:)\s*/gi, '').trim();
+                        if (cleanTerm && cleanTerm.length > 2 && cleanTerm.length < 50) {
+                            trends.push(cleanTerm);
+                        }
+                    });
+                }
+            }
+        });
+
+        // Also try CDATA extraction
+        const xml = response.data;
+        const cdataRegex = /<!\[CDATA\[(.*?)\]\]>/g;
+        let match;
+        
+        while ((match = cdataRegex.exec(xml)) !== null) {
+            const text = match[1].trim();
+            if (text && 
+                text !== 'Daily Search Trends' &&
+                !text.includes('Google Trends') &&
+                text.length > 2 && 
+                text.length < 60) {
+                trends.push(text);
+            }
         }
 
         // Remove duplicates and limit to 10
-        const uniqueTrends = [...new Set(trends)].slice(0, 10);
+        const uniqueTrends = [...new Set(trends)].filter(t => t.length > 2).slice(0, 10);
         
         if (uniqueTrends.length > 0) {
-            logger.info(`Found ${uniqueTrends.length} trends for ${countryName}`);
+            logger.info(`Google Trends RSS ${countryName}: ${uniqueTrends.length} trends found`);
             return uniqueTrends;
         }
 
-        logger.warn(`No trends found in HTML for ${countryName}`);
+        logger.warn(`Google Trends RSS ${countryName}: No valid trends extracted`);
         return [];
 
     } catch (error) {
-        logger.error(`Scraping failed for ${countryName}: ${error.message}`);
+        logger.error(`Google Trends RSS failed for ${countryName}: ${error.message}`);
         return [];
     }
 }
@@ -271,9 +282,9 @@ app.get('/api/trends', async (req, res) => {
         logger.info('Fetching fresh trends - no fallbacks...');
 
         const categories = [
-            { key: 'kenya', code: 'KE', name: 'Kenya', type: 'google_trends' },
-            { key: 'worldwide', code: 'US', name: 'Worldwide', type: 'google_news' },
-            { key: 'googletrends', code: 'GB', name: 'Google Trends', type: 'google_news' },
+            { key: 'kenya', code: 'KE', name: 'Kenya', type: 'google_trends_rss' },
+            { key: 'worldwide', code: 'US', name: 'Worldwide', type: 'google_trends_rss' },
+            { key: 'googletrends', code: '', name: 'Google Trends Global', type: 'google_trends_rss' },
             { key: 'news', code: 'general', name: 'News', type: 'newsapi' },
             { key: 'technology', code: 'technology', name: 'Technology', type: 'newsapi' },
             { key: 'entertainment', code: 'entertainment', name: 'Entertainment', type: 'newsapi' },
@@ -291,8 +302,8 @@ app.get('/api/trends', async (req, res) => {
             try {
                 let trends = [];
                 
-                if (category.type === 'google_trends') {
-                    trends = await scrapeTrends(category.code, category.name);
+                if (category.type === 'google_trends_rss') {
+                    trends = await getGoogleTrendsRSS(category.code, category.name);
                 } else if (category.type === 'google_news') {
                     trends = await getNewsTopics(category.code, category.name);
                 } else if (category.type === 'newsapi') {
