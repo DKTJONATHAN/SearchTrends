@@ -160,6 +160,38 @@ async function getNewsTopics(countryCode, countryName) {
     }
 }
 
+// Fetch RSS feeds from various sources
+async function fetchRSSFeed(url, feedName) {
+    try {
+        const response = await axios.get(url, {
+            timeout: 8000,
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (compatible; TrendScope/1.0)',
+                'Accept': 'application/rss+xml, application/xml, text/xml'
+            }
+        });
+        
+        const xml = response.data;
+        const $ = cheerio.load(xml, { xmlMode: true });
+        const trends = [];
+        
+        // Extract titles from RSS feeds
+        $('item title, entry title').each((i, element) => {
+            const title = $(element).text().trim();
+            if (title && title.length > 5 && title.length < 100 && !trends.includes(title)) {
+                trends.push(title);
+            }
+        });
+
+        console.log(`✅ RSS ${feedName}: ${trends.length} items fetched`);
+        return trends.slice(0, 10);
+
+    } catch (error) {
+        console.error(`❌ RSS feed ${feedName} failed:`, error.message);
+        return [];
+    }
+}
+
 // Fetch NewsAPI topics (UNCHANGED - YOUR WORKING VERSION)
 async function getNewsAPITopics(category, categoryName) {
     try {
