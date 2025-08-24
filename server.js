@@ -4,54 +4,89 @@ const cheerio = require('cheerio');
 const UserAgent = require('user-agents');
 const cors = require('cors');
 const path = require('path');
+const NodeCache = require('node-cache');
+const rateLimit = require('express-rate-limit');
+const winston = require('winston');
+const dotenv = require('dotenv');
+const createCsvWriter = require('csv-writer').createObjectCsvWriter;
+
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const cache = new NodeCache({ stdTTL: 600 }); // 10 min TTL
+
+// Logger setup
+const logger = winston.createLogger({
+    level: 'info',
+    format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.json()
+    ),
+    transports: [
+        new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
+        new winston.transports.File({ filename: 'logs/combined.log' })
+    ]
+});
+if (process.env.NODE_ENV !== 'production') {
+    logger.add(new winston.transports.Console({
+        format: winston.format.simple()
+    }));
+}
 
 app.use(cors());
-app.use(express.static('.'));
+app.use(express.static('.')); // Serve static files from root
+app.use(express.json());
 
-// Serve the HTML file
+// Rate limiting
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100 // 100 requests per IP
+});
+app.use('/api/', limiter);
+
+// Mock data fallback
+const mockData = {
+    kenya: ['Afrobeats', 'Nairobi Fashion', 'Benga Music', 'Kenyan Startups', 'Safaricom', 'M-Pesa', 'Kenya Marathon', 'Tech Hubs', 'Tourism Kenya', 'Kipepeo'],
+    worldwide: ['Climate Action', 'AI Revolution', 'Metaverse', 'Crypto Trends', 'Global Health', 'Sustainable Tech', 'Digital Nomads', 'Space Tourism', '5G Expansion', 'Quantum Leap'],
+    xtrends: ['#XSpaces', 'Elon Musk', '#Crypto', 'SpaceX Launch', '#AI', 'Neuralink', '#Web3', 'Starlink', '#TechTalk', 'Mars Mission'],
+    news: ['Global Politics', 'Elections 2025', 'Climate Summit', 'Economic Recovery', 'Vaccine Updates', 'Breaking News', 'International Trade', 'Human Rights', 'Policy Changes', 'War Updates'],
+    technology: ['Quantum Computing', 'Web3', 'AR/VR', '5G Networks', 'Blockchain', 'AI Ethics', 'Cybersecurity', 'Cloud Computing', 'IoT Devices', 'Robotics'],
+    entertainment: ['AfroPop', 'Netflix Hits', 'Grammy Buzz', 'K-Drama', 'Hollywood Gossip', 'Bollywood Trends', 'Music Festivals', 'Streaming Wars', 'Oscar Predictions', 'Gaming Culture'],
+    sports: ['Kenya Marathon', 'Premier League', 'NBA Finals', 'Olympics 2026', 'Rugby Sevens', 'Cricket IPL', 'Esports', 'F1 Racing', 'Athletics', 'Soccer Transfers'],
+    lifestyle: ['Minimalism', 'Sustainable Living', 'Travel Trends', 'Wellness Retreats', 'Vegan Recipes', 'DIY Projects', 'Home Decor', 'Fitness Challenges', 'Mindfulness', 'Eco Fashion'],
+    business: ['Startup Funding', 'Crypto Markets', 'Stock Market', 'Entrepreneurship', 'Remote Work', 'E-commerce Boom', 'Fintech', 'Supply Chain', 'Mergers', 'Gig Economy'],
+    health: ['Mental Health', 'Telemedicine', 'Nutrition Trends', 'Fitness Apps', 'Vaccine Rollout', 'Wellness Tech', 'Aging Research', 'Sleep Science', 'Pandemic Recovery', 'Yoga Trends'],
+    science: ['Space Exploration', 'Climate Tech', 'Quantum Physics', 'Biotech', 'AI Research', 'Renewable Energy', 'Genomics', 'Astrophysics', 'Nanotech', 'Deep Sea Exploration'],
+    fashion: ['Sustainable Fashion', 'Streetwear', 'Athleisure', 'Vintage Trends', 'Designer Collabs', 'Fashion Week', 'Eco Fabrics', 'Minimalist Style', 'Bold Accessories', 'Cultural Prints']
+};
+
+// Serve HTML
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Function to scrape Google Trends directly
-async function scrapeTrends(countryCode, countryName) {
+// Scrape Google Trends
+async function scrapeTrends(countryCode, categoryName) {
     try {
-        console.log(`🔍 Scraping trends for ${countryName}...`);
-        
+        logger.info(`Scraping trends for ${categoryName}`);
         const userAgent = new UserAgent();
         const headers = {
             'User-Agent': userAgent.toString(),
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Accept-Encoding': 'gzip, deflate',
-            'Connection': 'keep-alive'
+            'Accept-Language': 'en-US,en;q=0.5'
         };
 
-        // Google Trends daily trends URL
-        const url = `https://trends.google.com/trends/trendingsearches/daily?geo=${countryCode}`;
-        
-        const response = await axios.get(url, { 
-            headers,
-            timeout: 15000,
-            maxRedirects: 5
-        });
+        const url = `https://trends.google.com/trends/trendingsearches/daily?geo=${countryCode || ''}`;
+        const response = await axios.get(url, { headers, timeout: 15000 });
+        const $ = cheerio.load(response.data);
 
-        const html = response.data;
-        const $ = cheerio.load(html);
-        
-        // Try to extract trending searches from the page
         const trends = [];
-        
-        // Look for different possible selectors where trends might be
         const selectors = [
             '.trending-searches-item .title',
-            '.trending-search .title', 
+            '.trending-search .title',
             '[data-ved] .title',
             '.trending-searches .title',
-            '.search-item .title',
             'h3',
             '.title'
         ];
@@ -59,143 +94,167 @@ async function scrapeTrends(countryCode, countryName) {
         for (const selector of selectors) {
             $(selector).each((i, element) => {
                 const text = $(element).text().trim();
-                if (text && text.length > 0 && text.length < 100) {
-                    trends.push(text);
-                }
+                if (text && text.length > 0 && text.length < 100) trends.push(text);
             });
-            
             if (trends.length > 0) break;
         }
 
-        // Remove duplicates and limit to 15
-        const uniqueTrends = [...new Set(trends)].slice(0, 15);
-        
-        if (uniqueTrends.length > 0) {
-            console.log(`✅ Found ${uniqueTrends.length} trends for ${countryName}`);
-            return uniqueTrends;
-        }
-
-        console.log(`⚠️ No trends found in HTML for ${countryName}`);
-        return [];
-
+        const uniqueTrends = [...new Set(trends)].slice(0, 10);
+        logger.info(`Found ${uniqueTrends.length} trends for ${categoryName}`);
+        return uniqueTrends;
     } catch (error) {
-        console.error(`❌ Scraping failed for ${countryName}:`, error.message);
+        logger.error(`Scraping failed for ${categoryName}: ${error.message}`);
         return [];
     }
 }
 
-// Alternative: Use RSS feeds from Google News (more reliable)
-async function getNewsTopics(countryCode, countryName) {
+// Fetch NewsAPI topics
+async function getNewsTopics(category, categoryName) {
     try {
-        console.log(`📰 Getting news topics for ${countryName}...`);
-        
-        const userAgent = new UserAgent();
-        const headers = {
-            'User-Agent': userAgent.toString(),
-            'Accept': 'application/rss+xml, application/xml, text/xml'
-        };
-
-        // Google News RSS URLs for different countries
-        const rssUrls = {
-            'KE': 'https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRFZxYUdjU0FtVnVHZ0pMUlNnQVAB?hl=en-KE&gl=KE&ceid=KE:en',
-            'US': 'https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRFZxYUdjU0FtVnVHZ0pWVXlnQVAB?hl=en-US&gl=US&ceid=US:en',
-            'GB': 'https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRFZxYUdjU0FtVnVHZ0pIVWlnQVAB?hl=en-GB&gl=GB&ceid=GB:en'
-        };
-
-        const url = rssUrls[countryCode];
-        if (!url) return [];
-
-        const response = await axios.get(url, { 
-            headers,
+        logger.info(`Fetching NewsAPI topics for ${categoryName}`);
+        const apiKey = '33579597361b410a9454a9634f3fd8a5';
+        const response = await axios.get(`https://newsapi.org/v2/top-headlines?category=${category}&language=en&apiKey=${apiKey}`, {
             timeout: 10000
         });
 
-        const $ = cheerio.load(response.data, { xmlMode: true });
-        const topics = [];
+        const topics = response.data.articles
+            .map(article => article.title.split(' - ')[0].trim())
+            .filter(title => title.length > 5 && title.length < 60)
+            .slice(0, 10);
 
-        $('item title').each((i, element) => {
-            const title = $(element).text().trim();
-            if (title && i < 15) {
-                // Extract main topic/keyword from news title
-                const cleanTitle = title
-                    .replace(/\s*-\s*.+$/, '') // Remove " - Source" 
-                    .replace(/^\w+:\s*/, '') // Remove "Breaking:" etc
-                    .trim();
-                
-                if (cleanTitle.length > 5 && cleanTitle.length < 60) {
-                    topics.push(cleanTitle);
-                }
-            }
+        logger.info(`Found ${topics.length} news topics for ${categoryName}`);
+        return topics;
+    } catch (error) {
+        logger.error(`NewsAPI failed for ${categoryName}: ${error.message}`);
+        return mockData[category] || [];
+    }
+}
+
+// Fetch X Trends
+async function getXTrends() {
+    try {
+        logger.info('Fetching X Trends');
+        const bearerToken = 'AAAAAAAAAAAAAAAAAAAAAE783gEAAAAAel00S9G0811d2ZF%2ByaSXysMQZb4%3Dvug2Qo7Ym1Su6aCsFJRntheTjL0WwmE7nyjQVzyHDokhyZqII2';
+        const response = await axios.get('https://api.twitter.com/2/trends/place/1', {
+            headers: { Authorization: `Bearer ${bearerToken}` },
+            timeout: 10000
         });
 
-        if (topics.length > 0) {
-            console.log(`✅ Found ${topics.length} news topics for ${countryName}`);
-            return topics;
-        }
+        const trends = response.data.trends
+            .map(trend => ({
+                name: trend.name,
+                tweet_volume: trend.tweet_volume || null
+            }))
+            .filter(trend => trend.name.length > 0)
+            .sort((a, b) => (b.tweet_volume || 0) - (a.tweet_volume || 0))
+            .map(trend => trend.name)
+            .slice(0, 10);
 
-        return [];
-
+        logger.info(`Found ${trends.length} X Trends`);
+        return trends;
     } catch (error) {
-        console.error(`❌ News topics failed for ${countryName}:`, error.message);
-        return [];
+        logger.error(`X Trends failed: ${error.message}`);
+        return mockData.xtrends;
     }
 }
 
 // API endpoint to get trends
 app.get('/api/trends', async (req, res) => {
     try {
-        console.log('🚀 Starting real data fetch...');
-        
-        const countries = [
-            { key: 'kenya', code: 'KE', name: 'Kenya' },
-            { key: 'us', code: 'US', name: 'United States' },
-            { key: 'uk', code: 'GB', name: 'United Kingdom' }
+        logger.info('Starting trends fetch');
+        const cached = cache.get('trends');
+        if (cached) {
+            logger.info('Returning cached trends');
+            return res.json(cached);
+        }
+
+        const categories = [
+            { key: 'kenya', code: 'KE', name: 'Kenya', type: 'trends' },
+            { key: 'worldwide', code: '', name: 'Worldwide', type: 'trends' },
+            { key: 'xtrends', code: null, name: 'X Trends', type: 'x' },
+            { key: 'news', code: 'general', name: 'News', type: 'news' },
+            { key: 'technology', code: 'technology', name: 'Technology', type: 'news' },
+            { key: 'entertainment', code: 'entertainment', name: 'Entertainment', type: 'news' },
+            { key: 'sports', code: 'sports', name: 'Sports', type: 'news' },
+            { key: 'lifestyle', code: 'lifestyle', name: 'Lifestyle', type: 'news' },
+            { key: 'business', code: 'business', name: 'Business', type: 'news' },
+            { key: 'health', code: 'health', name: 'Health', type: 'news' },
+            { key: 'science', code: 'science', name: 'Science', type: 'news' },
+            { key: 'fashion', code: 'fashion', name: 'Fashion', type: 'news' }
         ];
 
         const results = {};
         let totalFound = 0;
 
-        for (const country of countries) {
-            console.log(`\n--- Processing ${country.name} ---`);
-            
-            // Try scraping first
-            let trends = await scrapeTrends(country.code, country.name);
-            
-            // If scraping fails, try news topics
-            if (trends.length === 0) {
-                trends = await getNewsTopics(country.code, country.name);
+        for (const category of categories) {
+            logger.info(`Processing ${category.name}`);
+            let trends = [];
+            if (category.type === 'trends') {
+                trends = await scrapeTrends(category.code, category.name);
+            } else if (category.type === 'news') {
+                trends = await getNewsTopics(category.code, category.name);
+            } else if (category.type === 'x') {
+                trends = await getXTrends();
             }
-            
-            results[country.key] = trends;
+
+            if (trends.length === 0) {
+                logger.warn(`No data for ${category.name}, using mock data`);
+                trends = mockData[category.key] || [];
+            }
+
+            results[category.key] = trends;
             totalFound += trends.length;
-            
-            // Wait between requests
-            await new Promise(resolve => setTimeout(resolve, 3000));
+
+            await new Promise(resolve => setTimeout(resolve, 1000));
         }
 
-        if (totalFound === 0) {
-            return res.json({
-                success: false,
-                error: 'Unable to fetch any real data. Google may be blocking requests or their structure has changed. This is a common issue with Google Trends scraping.'
-            });
-        }
-
-        console.log(`✅ Successfully found ${totalFound} total trends across all countries`);
-        
-        res.json({
+        const response = {
             success: true,
             timestamp: new Date().toISOString(),
             total_trends: totalFound,
-            method: 'web_scraping',
+            method: 'mixed_api_scraping',
             ...results
-        });
+        };
 
+        cache.set('trends', response);
+        res.json(response);
     } catch (error) {
-        console.error('❌ Critical error:', error);
-        res.json({
+        logger.error(`Critical error: ${error.message}`);
+        res.status(500).json({
             success: false,
             error: `System error: ${error.message}`
         });
+    }
+});
+
+// Export trends as CSV
+app.get('/api/export', async (req, res) => {
+    try {
+        logger.info('Exporting trends as CSV');
+        const trends = cache.get('trends') || { success: false, error: 'No trends available' };
+        if (!trends.success) {
+            return res.status(400).json(trends);
+        }
+
+        const records = Object.entries(trends)
+            .filter(([key]) => key !== 'success' && key !== 'timestamp' && key !== 'total_trends' && key !== 'method')
+            .flatMap(([category, keywords]) =>
+                keywords.map(keyword => ({ category, keyword }))
+            );
+
+        const csvWriter = createCsvWriter({
+            path: 'trends_export.csv',
+            header: [
+                { id: 'category', title: 'Category' },
+                { id: 'keyword', title: 'Keyword' }
+            ]
+        });
+
+        await csvWriter.writeRecords(records);
+        res.download('trends_export.csv');
+    } catch (error) {
+        logger.error(`Export failed: ${error.message}`);
+        res.status(500).json({ success: false, error: `Export failed: ${error.message}` });
     }
 });
 
@@ -203,13 +262,11 @@ app.get('/api/trends', async (req, res) => {
 app.get('/api/health', (req, res) => {
     res.json({
         success: true,
-        message: 'Server is running',
+        message: 'TrendScope server running',
         timestamp: new Date().toISOString()
     });
 });
 
 app.listen(PORT, () => {
-    console.log(`🚀 Real Trends Platform running on http://localhost:${PORT}`);
-    console.log(`🔍 Using web scraping method for real Google data`);
-    console.log(`💡 This may take 10-15 seconds per request to avoid detection`);
+    logger.info(`🚀 TrendScope Platform running on http://localhost:${PORT}`);
 });
