@@ -16,8 +16,19 @@ class handler(BaseHTTPRequestHandler):
             # Initialize PyTrends
             pytrends = TrendReq(hl='en-US', tz=180)  # Kenya timezone
             
+            # Map region codes to country names (PyTrends requires country names)
+            region_mapping = {
+                'KE': 'kenya',
+                'US': 'united_states',
+                'UK': 'united_kingdom',
+                'CA': 'canada',
+                'AU': 'australia'
+            }
+            
+            country_name = region_mapping.get(region, 'united_states')
+            
             # Get trending searches for the region
-            trending_searches = pytrends.trending_searches(pn=region)
+            trending_searches = pytrends.trending_searches(pn=country_name)
             
             # Convert to list (PyTrends returns DataFrame)
             trends_list = trending_searches[0].tolist() if not trending_searches.empty else []
