@@ -37,38 +37,38 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// News categories with search queries
+// News categories with optimized search queries
 const NEWS_CATEGORIES = {
-    general: { name: 'General News', query: 'Kenya news' },
-    politics: { name: 'Politics', query: 'Kenya politics' },
-    business: { name: 'Business', query: 'Kenya business economy' },
-    sports: { name: 'Sports', query: 'Kenya sports' },
-    entertainment: { name: 'Entertainment', query: 'Kenya entertainment' },
-    technology: { name: 'Technology', query: 'Kenya technology' },
-    health: { name: 'Health', query: 'Kenya health' },
-    lifestyle: { name: 'Lifestyle', query: 'Kenya lifestyle' }
+    general: { name: 'General News', query: 'Kenya' },
+    politics: { name: 'Politics', query: 'Kenya politics OR government' },
+    business: { name: 'Business', query: 'Kenya business OR economy OR finance' },
+    sports: { name: 'Sports', query: 'Kenya sports OR football OR athletics' },
+    entertainment: { name: 'Entertainment', query: 'Kenya entertainment OR music OR movies' },
+    technology: { name: 'Technology', query: 'Kenya technology OR digital OR innovation' },
+    health: { name: 'Health', query: 'Kenya health OR healthcare OR medicine' },
+    lifestyle: { name: 'Lifestyle', query: 'Kenya lifestyle OR fashion OR culture' }
 };
 
-// GNews API integration
+// GNews API integration - Primary source
 async function getGNewsByCategory(category, query) {
     try {
-        const apiKey = process.env.GNEWS_API;
-        if (!apiKey) {
-            throw new Error('GNEWS_API not configured');
-        }
-
+        logger.info(`Fetching ${category} news from GNews...`);
+        
         const response = await axios.get('https://gnews.io/api/v4/search', {
             params: {
                 q: query,
-                token: apiKey,
+                token: process.env.GNEWS_API,
                 lang: 'en',
                 country: 'ke',
-                max: 9,
-                sortby: 'publishedAt'
+                max: 12, // Get extra to filter out duplicates
+                sortby: 'publishedAt',
+                in: 'title,description'
             },
-            timeout: 8000
+            timeout: 10000
         });
 
+        logger.info(`GNews ${category}: ${response.data.articles?.length || 0} articles found`);
+        
         return response.data.articles.map(article => ({
             title: article.title,
             link: article.url,
@@ -77,7 +77,7 @@ async function getGNewsByCategory(category, query) {
             source: article.source.name,
             category: category,
             image: article.image,
-            fromGNews: true
+            from: 'gnews'
         }));
     } catch (error) {
         logger.error(`GNews API error for ${category}: ${error.message}`);
@@ -85,25 +85,25 @@ async function getGNewsByCategory(category, query) {
     }
 }
 
-// NewsAPI integration (fallback)
+// NewsAPI integration - Fallback source
 async function getNewsAPIByCategory(category, query) {
     try {
-        const apiKey = process.env.NEWSAPI_KEY;
-        if (!apiKey) {
-            return [];
-        }
-
+        logger.info(`Fetching ${category} news from NewsAPI...`);
+        
         const response = await axios.get('https://newsapi.org/v2/everything', {
             params: {
                 q: query,
-                apiKey: apiKey,
+                apiKey: process.env.NEWSAPI_KEY,
                 language: 'en',
-                pageSize: 9,
-                sortBy: 'publishedAt'
+                pageSize: 12,
+                sortBy: 'publishedAt',
+                searchIn: 'title,description'
             },
-            timeout: 8000
+            timeout: 10000
         });
 
+        logger.info(`NewsAPI ${category}: ${response.data.articles?.length || 0} articles found`);
+        
         return response.data.articles.map(article => ({
             title: article.title,
             link: article.url,
@@ -112,7 +112,7 @@ async function getNewsAPIByCategory(category, query) {
             source: article.source.name,
             category: category,
             image: article.urlToImage,
-            fromNewsAPI: true
+            from: 'newsapi'
         }));
     } catch (error) {
         logger.error(`NewsAPI error for ${category}: ${error.message}`);
@@ -123,93 +123,98 @@ async function getNewsAPIByCategory(category, query) {
 // Get global news (non-Kenyan)
 async function getGlobalNews() {
     try {
-        // Try GNews first
-        const gnewsApiKey = process.env.GNEWS_API;
-        if (gnewsApiKey) {
-            const response = await axios.get('https://gnews.io/api/v4/top-headlines', {
-                params: {
-                    token: gnewsApiKey,
-                    lang: 'en',
-                    max: 15,
-                    exclude: 'Kenya,kenya,Nairobi' // Exclude Kenyan content
-                },
-                timeout: 8000
-            });
+        logger.info('Fetching global news...');
+        
+        // Try GNews first for global news
+        const response = await axios.get('https://gnews.io/api/v4/top-headlines', {
+            params: {
+                token: process.env.GNEWS_API,
+                lang: 'en',
+                max: 15,
+                // Exclude Kenyan content by focusing on international sources
+                topic: 'world-news'
+            },
+            timeout: 10000
+        });
 
-            return response.data.articles.map(article => ({
-                title: article.title,
-                link: article.url,
-                content: article.description,
-                pubDate: article.publishedAt,
-                source: article.source.name,
-                category: 'global',
-                image: article.image,
-                fromGNews: true
-            }));
-        }
+        // Filter out any Kenyan content that might slip through
+        const globalArticles = response.data.articles.filter(article => 
+            !article.title.toLowerCase().includes('kenya') &&
+            !article.description.toLowerCase().includes('kenya')
+        );
 
-        // Fallback to NewsAPI
-        const newsapiKey = process.env.NEWSAPI_KEY;
-        if (newsapiKey) {
-            const response = await axios.get('https://newsapi.org/v2/top-headlines', {
-                params: {
-                    apiKey: newsapiKey,
-                    language: 'en',
-                    pageSize: 15,
-                    q: '-Kenya -kenya -Nairobi' // Exclude Kenyan content
-                },
-                timeout: 8000
-            });
-
-            return response.data.articles.map(article => ({
-                title: article.title,
-                link: article.url,
-                content: article.description,
-                pubDate: article.publishedAt,
-                source: article.source.name,
-                category: 'global',
-                image: article.urlToImage,
-                fromNewsAPI: true
-            }));
-        }
-
-        return [];
+        logger.info(`Global news: ${globalArticles.length} articles found`);
+        
+        return globalArticles.map(article => ({
+            title: article.title,
+            link: article.url,
+            content: article.description,
+            pubDate: article.publishedAt,
+            source: article.source.name,
+            category: 'global',
+            image: article.image,
+            from: 'gnews'
+        }));
     } catch (error) {
         logger.error(`Global news error: ${error.message}`);
         return [];
     }
 }
 
-// Main function to get news by category
+// Remove duplicate articles based on title similarity
+function removeDuplicates(articles) {
+    const seen = new Set();
+    return articles.filter(article => {
+        // Create a normalized version of the title for comparison
+        const normalizedTitle = article.title.toLowerCase().replace(/[^\w\s]/g, '').trim();
+        if (seen.has(normalizedTitle)) {
+            return false;
+        }
+        seen.add(normalizedTitle);
+        return true;
+    });
+}
+
+// Main function to get news by category with fallback logic
 async function getNewsByCategory(category) {
     const categoryConfig = NEWS_CATEGORIES[category];
     if (!categoryConfig) {
         return [];
     }
 
-    // Try GNews first (primary)
-    let news = await getGNewsByCategory(category, categoryConfig.query);
+    let articles = [];
     
-    // If GNews returns empty, try NewsAPI
-    if (news.length === 0 && process.env.NEWSAPI_KEY) {
-        news = await getNewsAPIByCategory(category, categoryConfig.query);
+    // Try GNews first (primary)
+    const gnewsArticles = await getGNewsByCategory(category, categoryConfig.query);
+    articles = [...gnewsArticles];
+    
+    // If we need more articles or GNews failed, try NewsAPI
+    if (articles.length < 6) {
+        const newsapiArticles = await getNewsAPIByCategory(category, categoryConfig.query);
+        articles = [...articles, ...newsapiArticles];
     }
-
-    return news.slice(0, 9); // Ensure max 9 items
+    
+    // Remove duplicates and limit to 9 articles
+    const uniqueArticles = removeDuplicates(articles);
+    return uniqueArticles.slice(0, 9);
 }
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
     res.status(200).json({
         success: true,
-        message: 'TrendScope server - GNews & NewsAPI integration',
+        message: 'TrendScope Server - Ready',
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development',
         apis: {
-            gnews: !!process.env.GNEWS_API,
-            newsapi: !!process.env.NEWSAPI_KEY
+            gnews: process.env.GNEWS_API ? 'Configured ✅' : 'Not configured ❌',
+            newsapi: process.env.NEWSAPI_KEY ? 'Configured ✅' : 'Not configured ❌'
         },
-        categories: Object.keys(NEWS_CATEGORIES)
+        categories: Object.keys(NEWS_CATEGORIES),
+        cache: {
+            enabled: true,
+            ttl: '10 minutes'
+        }
     });
 });
 
@@ -217,9 +222,21 @@ app.get('/api/health', (req, res) => {
 app.get('/api/news/:category', async (req, res) => {
     try {
         const category = req.params.category.toLowerCase();
-        const cached = cache.get(`news-${category}`);
+        
+        // Validate category
+        if (category !== 'global' && !NEWS_CATEGORIES[category]) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid category',
+                validCategories: Object.keys(NEWS_CATEGORIES).concat(['global'])
+            });
+        }
+
+        const cacheKey = `news-${category}`;
+        const cached = cache.get(cacheKey);
         
         if (cached) {
+            logger.info(`Returning cached data for ${category}`);
             return res.status(200).json(cached);
         }
 
@@ -231,13 +248,18 @@ app.get('/api/news/:category', async (req, res) => {
         }
 
         const responseData = {
+            success: true,
             category: category,
             items: news,
             count: news.length,
-            lastUpdated: new Date().toISOString()
+            lastUpdated: new Date().toISOString(),
+            sources: {
+                gnews: process.env.GNEWS_API ? 'active' : 'inactive',
+                newsapi: process.env.NEWSAPI_KEY ? 'active' : 'inactive'
+            }
         };
 
-        cache.set(`news-${category}`, responseData);
+        cache.set(cacheKey, responseData);
         res.status(200).json(responseData);
     } catch (error) {
         logger.error(`News endpoint error for ${req.params.category}: ${error.message}`);
@@ -254,6 +276,7 @@ app.get('/api/news', async (req, res) => {
     try {
         const cached = cache.get('all-news');
         if (cached) {
+            logger.info('Returning cached data for all news');
             return res.status(200).json(cached);
         }
 
@@ -263,12 +286,15 @@ app.get('/api/news', async (req, res) => {
         
         const allResults = await Promise.allSettled([...newsPromises, globalPromise]);
         
-        const responseData = {};
+        const responseData = {
+            success: true,
+            lastUpdated: new Date().toISOString()
+        };
+        
         categories.forEach((category, index) => {
             responseData[category] = allResults[index].status === 'fulfilled' ? allResults[index].value : [];
         });
         responseData.global = allResults[allResults.length - 1].status === 'fulfilled' ? allResults[allResults.length - 1].value : [];
-        responseData.lastUpdated = new Date().toISOString();
 
         cache.set('all-news', responseData);
         res.status(200).json(responseData);
@@ -285,47 +311,10 @@ app.get('/api/news', async (req, res) => {
 // API endpoint to get available categories
 app.get('/api/categories', (req, res) => {
     res.status(200).json({
+        success: true,
         categories: Object.keys(NEWS_CATEGORIES).concat(['global']),
+        count: Object.keys(NEWS_CATEGORIES).length + 1,
         description: 'Available news categories powered by GNews and NewsAPI'
-    });
-});
-
-// Export endpoint
-app.get('/api/export', async (req, res) => {
-    try {
-        const trends = cache.get('all-news') || {};
-        // Simple CSV export implementation
-        let csv = 'Category,Title,Source,Date,Link\n';
-        
-        Object.entries(trends).forEach(([category, items]) => {
-            if (Array.isArray(items)) {
-                items.forEach(item => {
-                    csv += `"${category}","${item.title.replace(/"/g, '""')}","${item.source}","${item.pubDate}","${item.link}"\n`;
-                });
-            }
-        });
-        
-        res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', 'attachment; filename=news-export.csv');
-        res.status(200).send(csv);
-    } catch (error) {
-        logger.error(`Export error: ${error.message}`);
-        res.status(500).json({ success: false, error: 'Export failed' });
-    }
-});
-
-// Serve static files for non-API routes
-app.get('*', (req, res) => {
-    res.status(404).json({
-        success: false,
-        error: 'Route not found',
-        available: [
-            '/api/health',
-            '/api/categories',
-            '/api/news',
-            '/api/news/:category',
-            '/api/export'
-        ]
     });
 });
 
@@ -334,16 +323,18 @@ app.use((err, req, res, next) => {
     logger.error(`Unhandled error: ${err.message}`);
     res.status(500).json({
         success: false,
-        error: 'Internal server error'
+        error: 'Internal server error',
+        message: err.message
     });
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    logger.info(`Server running on port ${PORT}`);
-    logger.info(`GNews API: ${process.env.GNEWS_API ? 'Configured' : 'Not configured'}`);
-    logger.info(`NewsAPI: ${process.env.NEWSAPI_KEY ? 'Configured' : 'Not configured'}`);
-    logger.info(`Available categories: ${Object.keys(NEWS_CATEGORIES).join(', ')}`);
+    logger.info(`🚀 Server running on port ${PORT}`);
+    logger.info(`📰 GNews API: ${process.env.GNEWS_API ? 'CONFIGURED' : 'NOT CONFIGURED'}`);
+    logger.info(`📺 NewsAPI: ${process.env.NEWSAPI_KEY ? 'CONFIGURED' : 'NOT CONFIGURED'}`);
+    logger.info(`🗂️ Available categories: ${Object.keys(NEWS_CATEGORIES).join(', ')}`);
+    logger.info(`💾 Caching: Enabled (10 minutes)`);
 });
 
 module.exports = app;
