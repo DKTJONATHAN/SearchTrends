@@ -1,6 +1,7 @@
 const express = require('express');
 const axios = require('axios');
-const cors = require('cors');
+const cheerio = require('cheerio');
+const stringSimilarity = require('string-similarity');
 const NodeCache = require('node-cache');
 const rateLimit = require('express-rate-limit');
 const winston = require('winston');
@@ -9,291 +10,483 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 const app = express();
-const cache = new NodeCache({ stdTTL: 600 }); // 10-minute cache
+const cache = new NodeCache({ stdTTL: 600 }); // cache articles for 10 minutes
 
-// Logger setup
+// Setup logger
 const logger = winston.createLogger({
-    level: 'info',
-    format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.json()
-    ),
-    transports: [
-        new winston.transports.Console({
-            format: winston.format.simple()
-        })
-    ]
+  level: 'info',
+  format: winston.format.combine(winston.format.timestamp(), winston.format.simple()),
+  transports: [new winston.transports.Console()],
 });
 
-app.use(cors());
-app.use(express.json());
-
-// Rate limiting
+// Rate limiter to prevent abuse
 const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 100,
-    standardHeaders: true,
-    legacyHeaders: false
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 app.use('/api/', limiter);
+app.use(express.json());
 
-// News categories with Kenyan-only queries
-const NEWS_CATEGORIES = {
-    general: { name: 'General News', query: 'Kenya' },
-    politics: { name: 'Politics', query: 'Kenya politics OR government' },
-    business: { name: 'Business', query: 'Kenya business OR economy OR finance' },
-    sports: { name: 'Sports', query: 'Kenya sports OR football OR athletics' },
-    entertainment: { name: 'Entertainment', query: 'Kenya entertainment OR music OR movies' },
-    technology: { name: 'Technology', query: 'Kenya technology OR digital OR innovation' },
-    health: { name: 'Health', query: 'Kenya health OR healthcare OR medicine' },
-    lifestyle: { name: 'Lifestyle', query: 'Kenya lifestyle OR fashion OR culture' }
+// Utility: Normalize strings for deduplication comparisons
+function normalizeText(text) {
+  return text.toLowerCase().replace(/[^\w\s]/g, '').trim();
+}
+
+// Deduplicate articles by URL and fuzzy title comparison
+function removeDuplicates(articles) {
+  const seenTitles = new Set();
+  const seenUrls = new Set();
+  const unique = [];
+
+  for (const article of articles) {
+    if (!article.title || !article.link) continue;
+
+    if (seenUrls.has(article.link)) continue;
+
+    const normTitle = normalizeText(article.title);
+    let isDuplicate = false;
+    for (const existingTitle of seenTitles) {
+      if (stringSimilarity.compareTwoStrings(existingTitle, normTitle) > 0.85) {
+        isDuplicate = true;
+        break;
+      }
+    }
+    if (isDuplicate) continue;
+
+    seenUrls.add(article.link);
+    seenTitles.add(normTitle);
+    unique.push(article);
+  }
+  return unique;
+}
+
+// ------------------ Site-specific scrapers ------------------
+
+// Scrape kenyans.co.ke (general news)
+async function scrapeKenyansCo() {
+  try {
+    const res = await axios.get('https://www.kenyans.co.ke/news', { timeout: 10000 });
+    const $ = cheerio.load(res.data);
+    const articles = [];
+    // Article selector and title/link selectors may need adjustment
+    $('.news-card').each((i, el) => {
+      const title = $(el).find('.news-card-title').text().trim();
+      const link = $(el).find('a').attr('href');
+      const image = $(el).find('img').attr('src');
+      if (title && link) {
+        articles.push({
+          title,
+          link: link.startsWith('http') ? link : `https://www.kenyans.co.ke${link}`,
+          source: 'kenyans.co.ke',
+          image: image || null,
+          category: 'general',
+          pubDate: new Date().toISOString(),
+          region: 'kenyan',
+        });
+      }
+    });
+    return articles;
+  } catch (err) {
+    logger.error('Kenyans.co.ke scraping error: ' + err.message);
+    return [];
+  }
+}
+
+// Scrape mpasho.co.ke (entertainment)
+async function scrapeMpasho() {
+  try {
+    const res = await axios.get('https://mpasho.co.ke/category/entertainment/', { timeout: 10000 });
+    const $ = cheerio.load(res.data);
+    const articles = [];
+    $('.td_module_16').each((i, el) => {
+      const title = $(el).find('.entry-title a').text().trim();
+      const link = $(el).find('.entry-title a').attr('href');
+      const image = $(el).find('img').attr('src');
+      if (title && link) {
+        articles.push({
+          title,
+          link,
+          source: 'mpasho.co.ke',
+          image: image || null,
+          category: 'entertainment',
+          pubDate: new Date().toISOString(),
+          region: 'kenyan',
+        });
+      }
+    });
+    return articles;
+  } catch (err) {
+    logger.error('Mpasho.co.ke scraping error: ' + err.message);
+    return [];
+  }
+}
+
+// Scrape ghafla.com (entertainment)
+async function scrapeGhafla() {
+  try {
+    const res = await axios.get('https://www.ghafla.com/entertainment', { timeout: 10000 });
+    const $ = cheerio.load(res.data);
+    const articles = [];
+    $('article.post').each((i, el) => {
+      const title = $(el).find('h3.entry-title a').text().trim();
+      const link = $(el).find('h3.entry-title a').attr('href');
+      const image = $(el).find('img').attr('src');
+      if (title && link) {
+        articles.push({
+          title,
+          link,
+          source: 'ghafla.com',
+          image: image || null,
+          category: 'entertainment',
+          pubDate: new Date().toISOString(),
+          region: 'kenyan',
+        });
+      }
+    });
+    return articles;
+  } catch (err) {
+    logger.error('Ghafla.com scraping error: ' + err.message);
+    return [];
+  }
+}
+
+// Scrape pulsesports.co.ke (sports)
+async function scrapePulseSports() {
+  try {
+    const res = await axios.get('https://www.pulsesports.co.ke', { timeout: 10000 });
+    const $ = cheerio.load(res.data);
+    const articles = [];
+    $('.article').each((i, el) => {
+      const title = $(el).find('.post-title a').text().trim();
+      const link = $(el).find('.post-title a').attr('href');
+      const image = $(el).find('img').attr('src');
+      if (title && link) {
+        articles.push({
+          title,
+          link,
+          source: 'pulsesports.co.ke',
+          image: image || null,
+          category: 'sports',
+          pubDate: new Date().toISOString(),
+          region: 'kenyan',
+        });
+      }
+    });
+    return articles;
+  } catch (err) {
+    logger.error('PulseSports.co.ke scraping error: ' + err.message);
+    return [];
+  }
+}
+
+// Scrape businessdailyafrica.com (business)
+async function scrapeBusinessDaily() {
+  try {
+    const res = await axios.get('https://www.businessdailyafrica.com', { timeout: 10000 });
+    const $ = cheerio.load(res.data);
+    const articles = [];
+    // General selector for news cards on homepage businessdaily
+    $('.headline-list a').each((i, el) => {
+      const title = $(el).text().trim();
+      const link = $(el).attr('href');
+      if (title && link) {
+        articles.push({
+          title,
+          link: link.startsWith('http') ? link : `https://www.businessdailyafrica.com${link}`,
+          source: 'businessdailyafrica.com',
+          image: null,
+          category: 'business',
+          pubDate: new Date().toISOString(),
+          region: 'kenyan',
+        });
+      }
+    });
+    return articles;
+  } catch (err) {
+    logger.error('BusinessDailyAfrica.com scraping error: ' + err.message);
+    return [];
+  }
+}
+
+// Scrape standardmedia.co.ke (news + business)
+async function scrapeStandardMedia() {
+  try {
+    const res = await axios.get('https://www.standardmedia.co.ke', { timeout: 10000 });
+    const $ = cheerio.load(res.data);
+    const articles = [];
+    $('.flexible-teaser a.title-link').each((i, el) => {
+      const title = $(el).text().trim();
+      const link = $(el).attr('href');
+      if (title && link) {
+        articles.push({
+          title,
+          link: link.startsWith('http') ? link : `https://www.standardmedia.co.ke${link}`,
+          source: 'standardmedia.co.ke',
+          image: null,
+          category: 'news',
+          pubDate: new Date().toISOString(),
+          region: 'kenyan',
+        });
+      }
+    });
+    return articles;
+  } catch (err) {
+    logger.error('StandardMedia scraping error: ' + err.message);
+    return [];
+  }
+}
+
+// Scrape royalmedia.co.ke (news)
+async function scrapeRoyalMedia() {
+  try {
+    const res = await axios.get('https://www.royalmedia.co.ke', { timeout: 10000 });
+    const $ = cheerio.load(res.data);
+    const articles = [];
+    $('.article-card a.article-title-link').each((i, el) => {
+      const title = $(el).text().trim();
+      const link = $(el).attr('href');
+      if (title && link) {
+        articles.push({
+          title,
+          link: link.startsWith('http') ? link : `https://www.royalmedia.co.ke${link}`,
+          source: 'royalmedia.co.ke',
+          category: 'news',
+          pubDate: new Date().toISOString(),
+          region: 'kenyan',
+        });
+      }
+    });
+    return articles;
+  } catch (err) {
+    logger.error('RoyalMedia scraping error: ' + err.message);
+    return [];
+  }
+}
+
+// Scrape mediamaxnetwork.co.ke (news)
+async function scrapeMediaMax() {
+  try {
+    const res = await axios.get('https://mediamaxnetwork.co.ke/news/', { timeout: 10000 });
+    const $ = cheerio.load(res.data);
+    const articles = [];
+    $('article.post').each((i, el) => {
+      const title = $(el).find('.entry-title a').text().trim();
+      const link = $(el).find('.entry-title a').attr('href');
+      if (title && link) {
+        articles.push({
+          title,
+          link,
+          source: 'mediamaxnetwork.co.ke',
+          category: 'news',
+          pubDate: new Date().toISOString(),
+          region: 'kenyan',
+        });
+      }
+    });
+    return articles;
+  } catch (err) {
+    logger.error('MediaMax scraping error: ' + err.message);
+    return [];
+  }
+}
+
+// ------------------ GNews API fetch ------------------
+async function fetchGNewsKenyan(categoryQuery) {
+  if (!process.env.GNEWS_API) {
+    logger.warn('GNEWS_API key not set');
+    return [];
+  }
+  try {
+    const response = await axios.get('https://gnews.io/api/v4/search', {
+      params: {
+        q: categoryQuery,
+        token: process.env.GNEWS_API,
+        lang: 'en',
+        country: 'ke',
+        max: 20,
+        sortby: 'publishedAt',
+      },
+      timeout: 10000,
+    });
+    return (response.data.articles || []).map((art) => ({
+      title: art.title,
+      link: art.url,
+      content: art.description,
+      pubDate: art.publishedAt,
+      source: art.source.name,
+      category: categoryQuery.includes('politics') ? 'politics' : 'general',
+      image: art.image,
+      from: 'gnews',
+      region: 'kenyan',
+    }));
+  } catch (err) {
+    logger.error('GNews API fetch error: ' + err.message);
+    return [];
+  }
+}
+
+
+// ------------------ Category mapping ------------------
+
+const CATEGORY_QUERIES = {
+  general: 'Kenya',
+  politics: 'Kenya politics OR government',
+  business: 'Kenya business OR economy OR finance',
+  sports: 'Kenya sports OR football OR athletics',
+  entertainment: 'Kenya entertainment OR music OR movies',
+  technology: 'Kenya technology OR digital OR innovation',
+  health: 'Kenya health OR healthcare OR medicine',
+  lifestyle: 'Kenya lifestyle OR fashion OR culture',
+  news: 'Kenya news',
 };
 
-// GNews API integration for Kenyan content only
-async function getGNewsKenyanContent(category, query) {
-    try {
-        logger.info(`Fetching Kenyan ${category} news from GNews...`);
-
-        const response = await axios.get('https://gnews.io/api/v4/search', {
-            params: {
-                q: query,
-                token: process.env.GNEWS_API,
-                lang: 'en',
-                country: 'ke',
-                max: 10, // Only Kenyan news
-                sortby: 'publishedAt',
-                in: 'title,description'
-            },
-            timeout: 10000
-        });
-
-        logger.info(`GNews Kenyan ${category}: ${response.data.articles?.length || 0} articles found`);
-
-        return response.data.articles.map(article => ({
-            title: article.title,
-            link: article.url,
-            content: article.description,
-            pubDate: article.publishedAt,
-            source: article.source.name,
-            category: category,
-            image: article.image,
-            from: 'gnews',
-            region: 'kenyan'
-        }));
-    } catch (error) {
-        logger.error(`GNews Kenyan API error for ${category}: ${error.message}`);
-        return [];
-    }
+// Scrape all sites and return combined articles
+async function scrapeAllSites() {
+  const [
+    kenyaNews,
+    mpasho,
+    ghafla,
+    pulseSports,
+    businessDaily,
+    standardMedia,
+    royalMedia,
+    mediaMax,
+  ] = await Promise.all([
+    scrapeKenyansCo(),
+    scrapeMpasho(),
+    scrapeGhafla(),
+    scrapePulseSports(),
+    scrapeBusinessDaily(),
+    scrapeStandardMedia(),
+    scrapeRoyalMedia(),
+    scrapeMediaMax(),
+  ]);
+  return [].concat(
+    kenyaNews,
+    mpasho,
+    ghafla,
+    pulseSports,
+    businessDaily,
+    standardMedia,
+    royalMedia,
+    mediaMax
+  );
 }
 
-// NewsAPI integration for Kenyan content only (fallback)
-async function getNewsAPIKenyanContent(category, query) {
-    try {
-        logger.info(`Fetching Kenyan ${category} news from NewsAPI...`);
-
-        const response = await axios.get('https://newsapi.org/v2/everything', {
-            params: {
-                q: query + ' AND (Kenya OR Kenyan)',
-                apiKey: process.env.NEWSAPI_KEY,
-                language: 'en',
-                pageSize: 10,
-                sortBy: 'publishedAt',
-                searchIn: 'title,description'
-            },
-            timeout: 10000
-        });
-
-        logger.info(`NewsAPI Kenyan ${category}: ${response.data.articles?.length || 0} articles found`);
-
-        return response.data.articles.map(article => ({
-            title: article.title,
-            link: article.url,
-            content: article.description,
-            pubDate: article.publishedAt,
-            source: article.source.name,
-            category: category,
-            image: article.urlToImage,
-            from: 'newsapi',
-            region: 'kenyan'
-        }));
-    } catch (error) {
-        logger.error(`NewsAPI Kenyan error for ${category}: ${error.message}`);
-        return [];
-    }
-}
-
-// Remove duplicate articles based on title similarity
-function removeDuplicates(articles) {
-    const seen = new Set();
-    return articles.filter(article => {
-        const normalizedTitle = article.title.toLowerCase().replace(/[^\w\s]/g, '').trim();
-        if (seen.has(normalizedTitle) || normalizedTitle.length < 10) {
-            return false;
-        }
-        seen.add(normalizedTitle);
-        return true;
-    });
-}
-
-// Main function to get 10 Kenyan articles per category (combining both sources)
+// Main aggregation function filtered by category
 async function getNewsByCategory(category) {
-    const categoryConfig = NEWS_CATEGORIES[category];
-    if (!categoryConfig) {
-        return [];
-    }
+  const query = CATEGORY_QUERIES[category] || 'Kenya';
 
-    // Get Kenyan content - try GNews first, then NewsAPI
-    let kenyanArticles = await getGNewsKenyanContent(category, categoryConfig.query);
+  const [scrapedArticles, gnewsArticles] = await Promise.all([
+    scrapeAllSites(),
+    fetchGNewsKenyan(query),
+  ]);
 
-    if (kenyanArticles.length < 10) {
-        const newsapiKenyan = await getNewsAPIKenyanContent(category, categoryConfig.query);
-        kenyanArticles = [...kenyanArticles, ...newsapiKenyan];
-    }
+  // Combine and filter by category (some scraper categories may be generic - add flexible check)
+  const combinedArticles = [...scrapedArticles, ...gnewsArticles].filter((article) => {
+    if (!article.category) return false;
+    return article.category.toLowerCase().includes(category.toLowerCase());
+  });
 
-    // Remove duplicates and slice to 10 items
-    const uniqueKenyan = removeDuplicates(kenyanArticles).slice(0, 10);
+  const uniqueArticles = removeDuplicates(combinedArticles);
 
-    return uniqueKenyan;
+  // Sort newest first
+  uniqueArticles.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+
+  // Limit to top 30 articles per category
+  return uniqueArticles.slice(0, 30);
 }
 
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-    res.status(200).json({
-        success: true,
-        message: 'TrendScope Server - Ready with Kenyan news only (10 topics per category)',
-        timestamp: new Date().toISOString(),
-        environment: process.env.NODE_ENV || 'development',
-        apis: {
-            gnews: process.env.GNEWS_API ? 'Configured ✅' : 'Not configured ❌',
-            newsapi: process.env.NEWSAPI_KEY ? 'Configured ✅' : 'Not configured ❌'
-        },
-        categories: Object.keys(NEWS_CATEGORIES),
-        topicsPerCategory: '10 (Kenyan only)',
-        cache: {
-            enabled: true,
-            ttl: '10 minutes'
-        }
-    });
-});
-
-// API endpoint to get news by category
+// API to get news by category
 app.get('/api/news/:category', async (req, res) => {
-    try {
-        const category = req.params.category.toLowerCase();
+  const category = req.params.category.toLowerCase();
 
-        // Validate category
-        if (!NEWS_CATEGORIES[category]) {
-            return res.status(400).json({
-                success: false,
-                error: 'Invalid category',
-                validCategories: Object.keys(NEWS_CATEGORIES)
-            });
-        }
+  if (!Object.keys(CATEGORY_QUERIES).includes(category)) {
+    return res.status(400).json({
+      success: false,
+      error: 'Invalid category',
+      validCategories: Object.keys(CATEGORY_QUERIES),
+    });
+  }
 
-        const cacheKey = `news-${category}`;
-        const cached = cache.get(cacheKey);
+  const cacheKey = `news-category-${category}`;
+  const cached = cache.get(cacheKey);
+  if (cached) {
+    logger.info(`Serving cached news for category: ${category}`);
+    return res.status(200).json(cached);
+  }
 
-        if (cached) {
-            logger.info(`Returning cached data for ${category}`);
-            return res.status(200).json(cached);
-        }
+  try {
+    const articles = await getNewsByCategory(category);
 
-        // Get Kenyan news only
-        const news = await getNewsByCategory(category);
+    const response = {
+      success: true,
+      category,
+      count: articles.length,
+      items: articles,
+      lastUpdated: new Date().toISOString(),
+    };
 
-        const responseData = {
-            success: true,
-            category: category,
-            items: news,
-            count: news.length,
-            lastUpdated: new Date().toISOString(),
-            sources: {
-                gnews: process.env.GNEWS_API ? 'active' : 'inactive',
-                newsapi: process.env.NEWSAPI_KEY ? 'active' : 'inactive'
-            },
-            region: 'kenyan'
-        };
-
-        cache.set(cacheKey, responseData);
-        res.status(200).json(responseData);
-    } catch (error) {
-        logger.error(`News endpoint error for ${req.params.category}: ${error.message}`);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to fetch news',
-            message: error.message
-        });
-    }
+    cache.set(cacheKey, response);
+    res.json(response);
+  } catch (err) {
+    logger.error('Error fetching news category:', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
-// API endpoint to get all news across all categories (Kenyan only)
+// API to get all news combined across categories deduplicated
 app.get('/api/news', async (req, res) => {
-    try {
-        const cached = cache.get('all-news');
-        if (cached) {
-            logger.info('Returning cached data for all news');
-            return res.status(200).json(cached);
-        }
+  const cacheKey = 'news-all';
+  const cached = cache.get(cacheKey);
+  if (cached) {
+    logger.info('Serving cached combined news');
+    return res.json(cached);
+  }
 
-        const categories = Object.keys(NEWS_CATEGORIES);
-        const newsPromises = categories.map(cat => getNewsByCategory(cat));
+  try {
+    const categories = Object.keys(CATEGORY_QUERIES);
+    const promises = categories.map((cat) => getNewsByCategory(cat));
+    const results = await Promise.all(promises);
 
-        const allResults = await Promise.allSettled(newsPromises);
+    // Flatten all articles and deduplicate globally
+    const allArticles = results.flat();
+    const uniqueArticles = removeDuplicates(allArticles);
 
-        const responseData = {
-            success: true,
-            lastUpdated: new Date().toISOString(),
-            totalCategories: categories.length,
-            totalTopics: 0
-        };
+    uniqueArticles.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
 
-        categories.forEach((category, index) => {
-            const articles = allResults[index].status === 'fulfilled' ? allResults[index].value : [];
-            responseData[category] = articles;
-            responseData.totalTopics += articles.length;
-        });
+    const response = {
+      success: true,
+      count: uniqueArticles.length,
+      items: uniqueArticles,
+      lastUpdated: new Date().toISOString(),
+    };
 
-        cache.set('all-news', responseData);
-        res.status(200).json(responseData);
-    } catch (error) {
-        logger.error(`All news endpoint error: ${error.message}`);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to fetch news',
-            message: error.message
-        });
-    }
+    cache.set(cacheKey, response);
+
+    res.json(response);
+  } catch (err) {
+    logger.error('Error fetching all news:', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
-// API endpoint to get available categories
-app.get('/api/categories', (req, res) => {
-    res.status(200).json({
-        success: true,
-        categories: Object.keys(NEWS_CATEGORIES),
-        count: Object.keys(NEWS_CATEGORIES).length,
-        description: 'Available news categories with 10 Kenyan topics each',
-        topicsPerCategory: '10 (Kenyan only)'
-    });
+// Health endpoint
+app.get('/api/health', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Kenyan news aggregator API is running',
+    categories: Object.keys(CATEGORY_QUERIES),
+    lastUpdated: new Date().toISOString(),
+  });
 });
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-    logger.error(`Unhandled error: ${err.message}`);
-    res.status(500).json({
-        success: false,
-        error: 'Internal server error',
-        message: err.message
-    });
-});
-
+// Server startup
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    logger.info(`🚀 Server running on port ${PORT}`);
-    logger.info(`📰 GNews API: ${process.env.GNEWS_API ? 'CONFIGURED' : 'NOT CONFIGURED'}`);
-    logger.info(`📺 NewsAPI: ${process.env.NEWSAPI_KEY ? 'CONFIGURED' : 'NOT CONFIGURED'}`);
-    logger.info(`🗂️ Available categories: ${Object.keys(NEWS_CATEGORIES).join(', ')}`);
-    logger.info(`📊 Topics per category: 10 (Kenyan only)`);
-    logger.info(`💾 Caching: Enabled (10 minutes)`);
+  logger.info(`Server running on port ${PORT}`);
 });
 
 module.exports = app;
