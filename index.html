@@ -1,599 +1,545 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" >
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TrendScope - Discover Viral Content Trends</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        
-        :root {
-            --primary: #6366f1;
-            --primary-hover: #4f46e5;
-            --secondary: #10b981;
-            --dark: #111827;
-            --darker: #0a0f1d;
-        }
-        
-        body { 
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(to bottom, var(--darker), var(--dark));
-            min-height: 100vh;
-        }
-        
-        .trend-card {
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        
-        .trend-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-        }
-        
-        .trend-item {
-            transition: all 0.2s ease;
-        }
-        
-        .trend-item:hover {
-            background-color: #374151 !important;
-        }
-        
-        .pulse {
-            animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.7; }
-            100% { opacity: 1; }
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .fade-in {
-            animation: fadeIn 0.5s ease forwards;
-        }
-        
-        .category-kenya { border-left: 4px solid #ef4444; }
-        .category-worldwide { border-left: 4px solid #3b82f6; }
-        .category-googletrends { border-left: 4px solid #f59e0b; }
-        .category-news { border-left: 4px solid #10b981; }
-        .category-technology { border-left: 4px solid #8b5cf6; }
-        .category-entertainment { border-left: 4px solid #ec4899; }
-        .category-sports { border-left: 4px solid #f97316; }
-        .category-lifestyle { border-left: 4px solid #06b6d4; }
-        .category-business { border-left: 4px solid #84cc16; }
-        .category-health { border-left: 4px solid #d946ef; }
-        .category-science { border-left: 4px solid #22d3ee; }
-        .category-fashion { border-left: 4px solid #f43f5e; }
-        
-        .gradient-text {
-            background: linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        
-        .region-badge {
-            font-size: 0.7rem;
-            padding: 0.2rem 0.5rem;
-            border-radius: 0.25rem;
-            margin-left: 0.5rem;
-        }
-        
-        .region-kenyan {
-            background-color: #ef4444;
-            color: white;
-        }
-        
-        .region-global {
-            background-color: #3b82f6;
-            color: white;
-        }
-        
-        @media (max-width: 640px) {
-            .container { padding-left: 1rem; padding-right: 1rem; }
-            .trend-card { width: 100%; }
-            h1 { font-size: 2.5rem; }
-            .header-icon { width: 4rem; height: 4rem; }
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TrendScope - Kenyan News & Trends</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap"
+    rel="stylesheet"
+  />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(90deg, #1C1F24, #252930);
+      color: #e4e6eb;
+      min-height: 100vh;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    .sidebar {
+      background: #11151c;
+      min-width: 260px;
+      color: #a9accb;
+      height: 100vh;
+      position: fixed;
+      overflow-y: auto;
+      transition: transform 0.3s ease;
+    }
+    .sidebar-header {
+      font-weight: 700;
+      font-size: 1.75rem;
+      padding: 1.5rem;
+      background: linear-gradient(90deg, #6366f1, #ec4899);
+      color: white;
+      letter-spacing: 0.05em;
+      user-select: none;
+    }
+    .sidebar a {
+      display: flex;
+      align-items: center;
+      padding: 0.9rem 1.5rem;
+      cursor: pointer;
+      color: #a9accb;
+      font-weight: 500;
+      gap: 1rem;
+      border-left: 4px solid transparent;
+      transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+    }
+    .sidebar a.active,
+    .sidebar a:hover {
+      background-color: #202538;
+      color: #8b5cf6;
+      border-left: 4px solid #8b5cf6;
+    }
+    .sidebar a i {
+      min-width: 18px;
+      font-size: 1.1rem;
+    }
+    main {
+      margin-left: 260px;
+      padding: 2rem 3rem;
+      max-width: 960px;
+    }
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+    .header-top h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      background: linear-gradient(90deg, #6366f1, #ec4899);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      user-select: none;
+    }
+    /* Search bar styling */
+    .search-bar {
+      flex: 1;
+      margin-left: 2rem;
+      position: relative;
+    }
+    .search-bar input[type="text"] {
+      width: 100%;
+      padding: 0.75rem 2.75rem 0.75rem 1rem;
+      border-radius: 12px;
+      border: none;
+      background: #2c3143;
+      color: #e4e6eb;
+      font-weight: 500;
+      outline-offset: 2px;
+      outline-color: #8b5cf6;
+      transition: background-color 0.3s ease;
+    }
+    .search-bar input[type="text"]::placeholder {
+      color: #7f7f7f;
+      font-style: italic;
+    }
+    .search-bar .fa-magnifying-glass {
+      position: absolute;
+      right: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #8b5cf6;
+    }
+    /* Toggle button for sidebar on small screens */
+    .toggle-sidebar-btn {
+      display: none;
+      font-size: 1.5rem;
+      font-weight: 700;
+      background: #8b5cf6;
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 50px;
+      cursor: pointer;
+      user-select: none;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.3s ease;
+    }
+    .toggle-sidebar-btn:hover {
+      background: #6f42c1;
+    }
+    /* News list styling */
+    .news-category {
+      background: #1e2230;
+      margin-bottom: 2rem;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 8px 20px rgba(99, 102, 241, 0.15);
+      border: 1px solid #2c3150;
+    }
+    .news-category-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.5rem;
+      background: linear-gradient(90deg, #6366f1, #ec4899);
+      cursor: pointer;
+      user-select: none;
+    }
+    .news-category-header h2 {
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: white;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .news-category-count {
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.15);
+      padding: 0.2rem 0.6rem;
+      border-radius: 30px;
+      font-size: 0.85rem;
+      color: #e4e6eb;
+    }
+    .news-list {
+      background: #262c49;
+      max-height: 420px;
+      overflow-y: auto;
+      transition: max-height 0.35s ease;
+    }
+    .news-item {
+      padding: 0.85rem 1.5rem;
+      border-bottom: 1px solid #3a3f61;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      transition: background-color 0.25s ease;
+      color: #d7d9ff;
+    }
+    .news-item:hover {
+      background-color: #454c7a;
+    }
+    .news-item-content {
+      flex: 1;
+      margin-right: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      min-width: 0;
+    }
+    .news-title {
+      font-weight: 600;
+      font-size: 1rem;
+      color: #c5c7ff;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      user-select: none;
+    }
+    .news-source {
+      font-size: 0.8rem;
+      color: #a3a4d6;
+      user-select: none;
+    }
+    .news-region-badge {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.15rem 0.45rem;
+      border-radius: 9999px;
+      user-select: none;
+    }
+    .region-kenya {
+      background:#ef4444; color: white;
+    }
+    .region-global {
+      background:#3b82f6; color: white;
+    }
+    /* Animated chevron */
+    .chevron {
+      transition: transform 0.3s ease;
+      color: white;
+    }
+    .chevron.rotated {
+      transform: rotate(90deg);
+    }
+    /* Footer styling */
+    footer {
+      margin-top: 4rem;
+      text-align: center;
+      color: #6b7280;
+      font-size: 0.9rem;
+      user-select: none;
+    }
+    /* Scrollbar styling for news lists */
+    .news-list::-webkit-scrollbar {
+      width: 8px;
+    }
+    .news-list::-webkit-scrollbar-thumb {
+      background-color: #6366f1;
+      border-radius: 10px;
+    }
+    /* Dark mode toggle position */
+    .theme-toggle {
+      cursor: pointer;
+      color: #8b5cf6;
+      font-size: 1.3rem;
+      padding: 0.3rem;
+      border-radius: 50%;
+      transition: background-color 0.3s ease;
+      user-select: none;
+    }
+    .theme-toggle:hover {
+      background-color: rgba(139, 92, 246, 0.2);
+    }
+    /* Responsive */
+    @media (max-width: 1024px) {
+      main {
+        margin-left: 0;
+        padding: 1.5rem 1.5rem 4rem;
+      }
+      .sidebar {
+        position: fixed;
+        z-index: 10;
+        height: 100%;
+        top: 0;
+        left: 0;
+        transform: translateX(-100%);
+        box-shadow: 4px 0 15px rgb(0 0 0 / 0.8);
+      }
+      .sidebar.open {
+        transform: translateX(0);
+      }
+      .toggle-sidebar-btn {
+        display: flex;
+      }
+    }
+  </style>
 </head>
-<body class="min-h-screen text-white">
-    <!-- Toast Notification -->
-    <div id="toast" class="fixed bottom-4 right-4 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg hidden z-50 flex items-center max-w-md">
-        <i class="fas fa-check-circle text-green-400 mr-3"></i>
-        <span id="toast-message"></span>
+<body>
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">TrendScope</div>
+    <nav>
+      <a href="#" class="sidebar-link active" data-category="general"><i class="fas fa-newspaper"></i> General News</a>
+      <a href="#" class="sidebar-link" data-category="politics"><i class="fas fa-landmark"></i> Politics</a>
+      <a href="#" class="sidebar-link" data-category="business"><i class="fas fa-chart-line"></i> Business</a>
+      <a href="#" class="sidebar-link" data-category="sports"><i class="fas fa-basketball-ball"></i> Sports</a>
+      <a href="#" class="sidebar-link" data-category="entertainment"><i class="fas fa-film"></i> Entertainment</a>
+      <a href="#" class="sidebar-link" data-category="technology"><i class="fas fa-microchip"></i> Technology</a>
+      <a href="#" class="sidebar-link" data-category="health"><i class="fas fa-heartbeat"></i> Health</a>
+      <a href="#" class="sidebar-link" data-category="lifestyle"><i class="fas fa-heart"></i> Lifestyle</a>
+    </nav>
+    <div style="padding: 1.5rem 1.5rem; font-size: 0.9rem; color: #7f7f7f; user-select:none;">
+      Powered by GNews & NewsAPI
+    </div>
+  </div>
+
+  <main>
+    <div class="header-top">
+      <button class="toggle-sidebar-btn" id="sidebarToggle" title="Toggle Menu">
+        <i class="fas fa-bars"></i>
+      </button>
+      <h1>Trend<span style="color:#8b5cf6;">Scope</span></h1>
+      <div class="search-bar">
+        <input
+          type="text"
+          id="searchInput"
+          placeholder="Search news headlines..."
+          aria-label="Search news"
+        />
+        <i class="fas fa-magnifying-glass"></i>
+      </div>
+      <div class="theme-toggle" id="themeToggle" title="Toggle Dark/Light Mode" role="button" tabindex="0" aria-pressed="false">
+        <i class="fas fa-moon"></i>
+      </div>
     </div>
 
-    <!-- Header Section -->
-    <div class="pt-16 pb-12 px-4 container mx-auto">
-        <div class="text-center">
-            <div class="header-icon inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-full mb-6 shadow-lg">
-                <i class="fas fa-chart-line text-2xl text-white"></i>
-            </div>
-            <h1 class="text-5xl font-bold mb-4 text-white">Trend<span class="gradient-text">Scope</span></h1>
-            <p class="text-lg text-gray-300 mb-4 max-w-2xl mx-auto">
-                Discover trending topics across multiple categories (5 Kenyan + 5 Global each)
-            </p>
-            <p class="text-sm text-gray-400 mb-8 max-w-xl mx-auto">
-                Real-time trends from Kenya and global perspectives across all categories
-            </p>
-            <div class="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-4">
-                <button onclick="fetchAllNews()" id="fetchBtn" class="px-8 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-all duration-300 flex items-center shadow-md hover:shadow-lg">
-                    <i class="fas fa-bolt mr-2"></i>
-                    Load All News
-                </button>
-                <button onclick="fetchTrends()" id="trendsBtn" class="px-8 py-3.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-all duration-300 flex items-center shadow-md hover:shadow-lg">
-                    <i class="fas fa-chart-line mr-2"></i>
-                    Get Trends
-                </button>
-                <button onclick="toggleAutoRefresh()" id="autoRefreshBtn" class="px-6 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-all duration-300 flex items-center shadow-md hover:shadow-lg">
-                    <i class="fas fa-sync-alt mr-2"></i>
-                    Auto-Refresh: On
-                </button>
-            </div>
-        </div>
-    </div>
+    <section id="newsContent">
+      <p class="text-center text-gray-400 mt-8">Loading news, please wait...</p>
+    </section>
+  </main>
 
-    <!-- Status -->
-    <div class="container mx-auto px-4 mb-8">
-        <div class="bg-gray-800/50 rounded-lg p-4 backdrop-blur-sm border border-gray-700/30">
-            <p id="status" class="text-center text-gray-300 text-sm flex items-center justify-center">
-                <i class="fas fa-info-circle mr-2 text-indigo-400"></i>
-                <span>Ready to explore news. Click "Load All News" to begin.</span>
-            </p>
-            <div id="progress" class="h-1 bg-gray-700 mt-2 rounded-full hidden">
-                <div class="h-full bg-indigo-500 rounded-full progress-bar"></div>
-            </div>
-        </div>
-    </div>
+  <footer>
+    <p><i class="fas fa-mouse-pointer"></i> Click news to copy headline instantly</p>
+    <p class="mt-1" style="font-size: 0.8rem;">Your gateway to trending content • Powered by GNews & NewsAPI</p>
+  </footer>
 
-    <!-- News Grid -->
-    <div class="container mx-auto px-4 pb-20">
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" id="newsContainer">
-            <!-- General News -->
-            <div class="trend-card category-news bg-gray-800/70 rounded-lg overflow-hidden border border-gray-700/30 backdrop-blur-sm">
-                <div class="bg-gradient-to-r from-emerald-600/20 to-gray-900/70 p-5 flex items-center justify-between">
-                    <div>
-                        <h2 class="text-xl font-semibold text-white mb-1">General News</h2>
-                        <p class="text-xs text-gray-400">5 Kenyan + 5 Global topics</p>
-                    </div>
-                    <i class="fas fa-newspaper text-emerald-400 text-2xl"></i>
-                </div>
-                <div class="p-5">
-                    <div id="general" class="space-y-3">
-                        <div class="text-center text-gray-500 py-8 text-sm">
-                            <i class="fas fa-newspaper text-2xl mb-2 opacity-50"></i>
-                            <p>No data yet</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+  <script>
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const themeToggle = document.getElementById('themeToggle');
+    const searchInput = document.getElementById('searchInput');
+    const newsContent = document.getElementById('newsContent');
+    const sidebarLinks = document.querySelectorAll('.sidebar-link');
 
-            <!-- Politics -->
-            <div class="trend-card category-kenya bg-gray-800/70 rounded-lg overflow-hidden border border-gray-700/30 backdrop-blur-sm">
-                <div class="bg-gradient-to-r from-red-600/20 to-gray-900/70 p-5 flex items-center justify-between">
-                    <div>
-                        <h2 class="text-xl font-semibold text-white mb-1">Politics</h2>
-                        <p class="text-xs text-gray-400">5 Kenyan + 5 Global topics</p>
-                    </div>
-                    <i class="fas fa-landmark text-red-400 text-2xl"></i>
-                </div>
-                <div class="p-5">
-                    <div id="politics" class="space-y-3">
-                        <div class="text-center text-gray-500 py-8 text-sm">
-                            <i class="fas fa-landmark text-2xl mb-2 opacity-50"></i>
-                            <p>No data yet</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    let newsData = {};
+    let filteredCategory = 'general';
+    let filteredSearchTerm = '';
 
-            <!-- Business -->
-            <div class="trend-card category-business bg-gray-800/70 rounded-lg overflow-hidden border border-gray-700/30 backdrop-blur-sm">
-                <div class="bg-gradient-to-r from-lime-600/20 to-gray-900/70 p-5 flex items-center justify-between">
-                    <div>
-                        <h2 class="text-xl font-semibold text-white mb-1">Business</h2>
-                        <p class="text-xs text-gray-400">5 Kenyan + 5 Global topics</p>
-                    </div>
-                    <i class="fas fa-chart-line text-lime-400 text-2xl"></i>
-                </div>
-                <div class="p-5">
-                    <div id="business" class="space-y-3">
-                        <div class="text-center text-gray-500 py-8 text-sm">
-                            <i class="fas fa-chart-line text-2xl mb-2 opacity-50"></i>
-                            <p>No data yet</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    // Sidebar toggle for small screens
+    sidebarToggle.addEventListener('click', () => {
+      sidebar.classList.toggle('open');
+    });
 
-            <!-- Sports -->
-            <div class="trend-card category-sports bg-gray-800/70 rounded-lg overflow-hidden border border-gray-700/30 backdrop-blur-sm">
-                <div class="bg-gradient-to-r from-orange-600/20 to-gray-900/70 p-5 flex items-center justify-between">
-                    <div>
-                        <h2 class="text-xl font-semibold text-white mb-1">Sports</h2>
-                        <p class="text-xs text-gray-400">5 Kenyan + 5 Global topics</p>
-                    </div>
-                    <i class="fas fa-basketball-ball text-orange-400 text-2xl"></i>
-                </div>
-                <div class="p-5">
-                    <div id="sports" class="space-y-3">
-                        <div class="text-center text-gray-500 py-8 text-sm">
-                            <i class="fas fa-basketball-ball text-2xl mb-2 opacity-50"></i>
-                            <p>No data yet</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    // Dark / Light theme toggle
+    themeToggle.addEventListener('click', toggleTheme);
+    themeToggle.addEventListener('keydown', (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        toggleTheme();
+      }
+    });
 
-            <!-- Entertainment -->
-            <div class="trend-card category-entertainment bg-gray-800/70 rounded-lg overflow-hidden border border-gray-700/30 backdrop-blur-sm">
-                <div class="bg-gradient-to-r from-pink-600/20 to-gray-900/70 p-5 flex items-center justify-between">
-                    <div>
-                        <h2 class="text-xl font-semibold text-white mb-1">Entertainment</h2>
-                        <p class="text-xs text-gray-400">5 Kenyan + 5 Global topics</p>
-                    </div>
-                    <i class="fas fa-film text-pink-400 text-2xl"></i>
-                </div>
-                <div class="p-5">
-                    <div id="entertainment" class="space-y-3">
-                        <div class="text-center text-gray-500 py-8 text-sm">
-                            <i class="fas fa-film text-2xl mb-2 opacity-50"></i>
-                            <p>No data yet</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    // Load theme preference or default to dark
+    if(localStorage.getItem('theme') === 'light') {
+      document.body.style.background = '#f9fafb';
+      document.body.style.color = '#111827';
+      themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+    }
 
-            <!-- Technology -->
-            <div class="trend-card category-technology bg-gray-800/70 rounded-lg overflow-hidden border border-gray-700/30 backdrop-blur-sm">
-                <div class="bg-gradient-to-r from-purple-600/20 to-gray-900/70 p-5 flex items-center justify-between">
-                    <div>
-                        <h2 class="text-xl font-semibold text-white mb-1">Technology</h2>
-                        <p class="text-xs text-gray-400">5 Kenyan + 5 Global topics</p>
-                    </div>
-                    <i class="fas fa-microchip text-purple-400 text-2xl"></i>
-                </div>
-                <div class="p-5">
-                    <div id="technology" class="space-y-3">
-                        <div class="text-center text-gray-500 py-8 text-sm">
-                            <i class="fas fa-microchip text-2xl mb-2 opacity-50"></i>
-                            <p>No data yet</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    function toggleTheme() {
+      if(document.body.style.background === 'rgb(249, 250, 251)') {
+        document.body.style.background = 'linear-gradient(90deg, #1C1F24, #252930)';
+        document.body.style.color = '#e4e6eb';
+        themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+        localStorage.setItem('theme', 'dark');
+      } else {
+        document.body.style.background = '#f9fafb';
+        document.body.style.color = '#111827';
+        themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+        localStorage.setItem('theme', 'light');
+      }
+    }
 
-            <!-- Health -->
-            <div class="trend-card category-health bg-gray-800/70 rounded-lg overflow-hidden border border-gray-700/30 backdrop-blur-sm">
-                <div class="bg-gradient-to-r from-fuchsia-600/20 to-gray-900/70 p-5 flex items-center justify-between">
-                    <div>
-                        <h2 class="text-xl font-semibold text-white mb-1">Health</h2>
-                        <p class="text-xs text-gray-400">5 Kenyan + 5 Global topics</p>
-                    </div>
-                    <i class="fas fa-heartbeat text-fuchsia-400 text-2xl"></i>
-                </div>
-                <div class="p-5">
-                    <div id="health" class="space-y-3">
-                        <div class="text-center text-gray-500 py-8 text-sm">
-                            <i class="fas fa-heartbeat text-2xl mb-2 opacity-50"></i>
-                            <p>No data yet</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    // Add event listeners on sidebar links
+    sidebarLinks.forEach(link => {
+      link.addEventListener('click', e => {
+        e.preventDefault();
+        sidebarLinks.forEach(a => a.classList.remove('active'));
+        link.classList.add('active');
+        filteredCategory = link.dataset.category;
+        filteredSearchTerm = '';
+        searchInput.value = '';
+        displayNewsCategory(filteredCategory);
+      });
+    });
 
-            <!-- Lifestyle -->
-            <div class="trend-card category-lifestyle bg-gray-800/70 rounded-lg overflow-hidden border border-gray-700/30 backdrop-blur-sm">
-                <div class="bg-gradient-to-r from-cyan-600/20 to-gray-900/70 p-5 flex items-center justify-between">
-                    <div>
-                        <h2 class="text-xl font-semibold text-white mb-1">Lifestyle</h2>
-                        <p class="text-xs text-gray-400">5 Kenyan + 5 Global topics</p>
-                    </div>
-                    <i class="fas fa-heart text-cyan-400 text-2xl"></i>
-                </div>
-                <div class="p-5">
-                    <div id="lifestyle" class="space-y-3">
-                        <div class="text-center text-gray-500 py-8 text-sm">
-                            <i class="fas fa-heart text-2xl mb-2 opacity-50"></i>
-                            <p>No data yet</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    // Search input event
+    searchInput.addEventListener('input', (e) => {
+      filteredSearchTerm = e.target.value.trim().toLowerCase();
+      displayNewsCategory(filteredCategory);
+    });
 
-            <!-- Global News -->
-            <div class="trend-card category-worldwide bg-gray-800/70 rounded-lg overflow-hidden border border-gray-700/30 backdrop-blur-sm">
-                <div class="bg-gradient-to-r from-blue-600/20 to-gray-900/70 p-5 flex items-center justify-between">
-                    <div>
-                        <h2 class="text-xl font-semibold text-white mb-1">Global News</h2>
-                        <p class="text-xs text-gray-400">International headlines</p>
-                    </div>
-                    <i class="fas fa-globe-americas text-blue-400 text-2xl"></i>
-                </div>
-                <div class="p-5">
-                    <div id="global" class="space-y-3">
-                        <div class="text-center text-gray-500 py-8 text-sm">
-                            <i class="fas fa-globe text-2xl mb-2 opacity-50"></i>
-                            <p>No data yet</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Footer -->
-    <div class="text-center py-8 text-gray-500 border-t border-gray-800/30 mx-4">
-        <div class="container mx-auto px-4">
-            <p class="text-sm mb-1"><i class="fas fa-mouse-pointer mr-1"></i> Click any news item to copy headline instantly</p>
-            <p class="text-xs"><i class="fas fa-bolt mr-1"></i> Your gateway to trending content • Powered by GNews & NewsAPI</p>
-        </div>
-    </div>
-
-    <script>
-        let newsData = {};
-        let autoRefreshInterval;
-        let isAutoRefreshOn = true;
-
-        // Initialize the page
-        document.addEventListener('DOMContentLoaded', function() {
-            // Start with auto-refresh
-            startAutoRefresh();
-            
-            // Load initial data
-            fetchAllNews();
-        });
-
-        function startAutoRefresh() {
-            if (autoRefreshInterval) clearInterval(autoRefreshInterval);
-            autoRefreshInterval = setInterval(fetchAllNews, 10 * 60 * 1000);
-            document.getElementById('autoRefreshBtn').innerHTML = '<i class="fas fa-sync-alt mr-2"></i> Auto-Refresh: On';
-            document.getElementById('autoRefreshBtn').classList.remove('bg-gray-600');
-            document.getElementById('autoRefreshBtn').classList.add('bg-emerald-600');
-            isAutoRefreshOn = true;
+    // Fetch all news from API
+    async function fetchAllNews() {
+      newsContent.innerHTML = '<p class="text-center text-gray-400 mt-8">Loading news, please wait...</p>';
+      try {
+        const response = await fetch('/api/news');
+        const data = await response.json();
+        if(data.success){
+          newsData = data;
+          displayNewsCategory(filteredCategory);
+        } else {
+          newsContent.innerHTML = `<p class="text-red-500 text-center mt-8">Failed to load news: ${data.error}</p>`;
         }
+      } catch(e){
+        newsContent.innerHTML = `<p class="text-red-500 text-center mt-8">Connection failed - check your server</p>`;
+      }
+    }
 
-        function stopAutoRefresh() {
-            if (autoRefreshInterval) clearInterval(autoRefreshInterval);
-            document.getElementById('autoRefreshBtn').innerHTML = '<i class="fas fa-sync-alt mr-2"></i> Auto-Refresh: Off';
-            document.getElementById('autoRefreshBtn').classList.remove('bg-emerald-600');
-            document.getElementById('autoRefreshBtn').classList.add('bg-gray-600');
-            isAutoRefreshOn = false;
+    // Display news for the selected category with search filtering
+    function displayNewsCategory(category) {
+      if (!newsData[category] || newsData[category].length === 0) {
+        newsContent.innerHTML = `<p class="text-center mt-8 text-gray-400">No news available for "${category}"</p>`;
+        return;
+      }
+
+      // Filter news by search term
+      const filtered = newsData[category].filter(item => {
+        return item.title.toLowerCase().includes(filteredSearchTerm);
+      });
+
+      if(filtered.length === 0){
+        newsContent.innerHTML = `<p class="text-center mt-8 text-gray-400">No results matching your search.</p>`;
+        return;
+      }
+
+      let html = `<div class="news-category">
+                    <div class="news-category-header" aria-expanded="true" tabindex="0" role="button">
+                      <h2><i class="${getCategoryIcon(category)} mr-2"></i> ${capitalize(category)} News 
+                      <span class="news-category-count">${filtered.length}</span></h2>
+                      <i class="fas fa-chevron-right chevron rotated"></i>
+                    </div>
+                    <div class="news-list">`;
+
+      filtered.forEach((item, idx) => {
+        html += `<div class="news-item" tabindex="0" role="button" aria-label="Copy news headline: ${item.title}" onclick="copyToClipboard('${escapeQuotes(item.title)}')" onkeydown="if(event.key==='Enter') copyToClipboard('${escapeQuotes(item.title)}')">
+                    <div class="news-item-content">
+                      <span class="news-title" title="${item.title}">${item.title}</span>
+                      <span class="news-source">${item.source || 'Unknown source'}</span>
+                    </div>
+                    <span class="news-region-badge ${item.region === 'kenyan' ? 'region-kenya' : 'region-global'}">
+                      ${item.region === 'kenyan' ? 'KE' : 'GL'}
+                    </span>
+                </div>`;
+      });
+
+      html += '</div></div>';
+
+      newsContent.innerHTML = html;
+
+      // Add toggle interaction for category collapsible
+      const categoryHeader = newsContent.querySelector('.news-category-header');
+      const newsList = newsContent.querySelector('.news-list');
+      const chevron = newsContent.querySelector('.chevron');
+      let expanded = true;
+
+      categoryHeader.addEventListener('click', () => {
+        if (expanded) {
+          newsList.style.maxHeight = '0';
+          chevron.classList.remove('rotated');
+          expanded = false;
+        } else {
+          newsList.style.maxHeight = '420px';
+          chevron.classList.add('rotated');
+          expanded = true;
         }
-
-        function toggleAutoRefresh() {
-            if (isAutoRefreshOn) {
-                stopAutoRefresh();
-            } else {
-                startAutoRefresh();
-            }
+      });
+      categoryHeader.addEventListener('keydown', (e) => {
+        if(e.key === 'Enter' || e.key === ' '){
+          e.preventDefault();
+          categoryHeader.click();
         }
+      });
+    }
 
-        async function fetchAllNews() {
-            const btn = document.getElementById('fetchBtn');
-            const status = document.getElementById('status');
-            const progress = document.getElementById('progress');
-            
-            btn.innerHTML = `
-                <i class="fas fa-circle-notch animate-spin mr-2"></i>
-                Loading News...
-            `;
-            btn.disabled = true;
-            status.innerHTML = '<i class="fas fa-sync-alt animate-spin mr-2"></i> Fetching news from all categories...';
-            
-            progress.classList.remove('hidden');
-            const progressBar = progress.querySelector('.progress-bar');
-            progressBar.style.width = '30%';
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        showToast(`Copied: "${text}"`);
+      }).catch(() => {
+        // Fallback
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        showToast(`Copied: "${text}"`);
+      });
+    }
 
-            try {
-                const response = await fetch('/api/news');
-                const data = await response.json();
-                
-                progressBar.style.width = '70%';
-                
-                if (data.success) {
-                    newsData = data;
-                    displayNews();
-                    const timeString = new Date().toLocaleTimeString('en-US', { 
-                        timeZone: 'Africa/Nairobi',
-                        hour12: true,
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    });
-                    status.innerHTML = `<i class="fas fa-check-circle text-green-400 mr-2"></i> News loaded • ${timeString} EAT • Click to copy`;
-                } else {
-                    status.innerHTML = `<i class="fas fa-exclamation-circle text-red-400 mr-2"></i> Error: ${data.error}`;
-                }
-            } catch (error) {
-                status.innerHTML = '<i class="fas fa-exclamation-triangle text-red-400 mr-2"></i> Connection failed - check your server';
-                
-                // Demo data for testing if server is down
-                newsData = {
-                    success: true,
-                    lastUpdated: new Date().toISOString(),
-                    general: [
-                        { title: "Kenyan election updates 2023", region: "kenyan" },
-                        { title: "Global climate summit results", region: "global" },
-                        { title: "Nairobi infrastructure projects", region: "kenyan" },
-                        { title: "International trade agreements", region: "global" }
-                    ],
-                    politics: [
-                        { title: "MPs salary debate in parliament", region: "kenyan" },
-                        { title: "US midterm elections analysis", region: "global" },
-                        { title: "County government developments", region: "kenyan" },
-                        { title: "EU policy changes", region: "global" }
-                    ],
-                    business: [
-                        { title: "Kenya stock market trends", region: "kenyan" },
-                        { title: "Global economic outlook", region: "global" },
-                        { title: "Safaricom financial results", region: "kenyan" },
-                        { title: "Tech company earnings", region: "global" }
-                    ]
-                };
-                displayNews();
-            }
+    function getCategoryIcon(category) {
+      switch (category) {
+        case 'general': return 'fas fa-newspaper';
+        case 'politics': return 'fas fa-landmark';
+        case 'business': return 'fas fa-chart-line';
+        case 'sports': return 'fas fa-basketball-ball';
+        case 'entertainment': return 'fas fa-film';
+        case 'technology': return 'fas fa-microchip';
+        case 'health': return 'fas fa-heartbeat';
+        case 'lifestyle': return 'fas fa-heart';
+        default: return 'fas fa-newspaper';
+      }
+    }
 
-            progressBar.style.width = '100%';
-            setTimeout(() => {
-                progress.classList.add('hidden');
-            }, 500);
+    function capitalize(str) {
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    }
 
-            btn.innerHTML = `
-                <i class="fas fa-bolt mr-2"></i>
-                Load All News
-            `;
-            btn.disabled = false;
+    function escapeQuotes(str) {
+      return str.replace(/'/g, "\\'").replace(/"/g, '\\"');
+    }
+
+    // Toast notification
+    function showToast(message) {
+      if(document.getElementById('toastContainer')) {
+        document.getElementById('toastContainer').remove();
+      }
+      const toast = document.createElement('div');
+      toast.id = 'toastContainer';
+      toast.textContent = message;
+      toast.setAttribute('role', 'alert');
+      toast.style.position = 'fixed';
+      toast.style.bottom = '1.5rem';
+      toast.style.left = '50%';
+      toast.style.transform = 'translateX(-50%)';
+      toast.style.backgroundColor = '#8b5cf6';
+      toast.style.color = '#fff';
+      toast.style.padding = '0.8rem 1.5rem';
+      toast.style.borderRadius = '1rem';
+      toast.style.boxShadow = '0 4px 15px rgba(139, 92, 246, 0.5)';
+      toast.style.fontWeight = '600';
+      toast.style.zIndex = '9999';
+      document.body.appendChild(toast);
+      setTimeout(() => {
+        toast.style.transition = 'opacity 0.6s ease';
+        toast.style.opacity = '0';
+      }, 2000);
+      setTimeout(() => {
+        if(document.getElementById('toastContainer')){
+          document.getElementById('toastContainer').remove();
         }
+      }, 2600);
+    }
 
-        async function fetchTrends() {
-            const btn = document.getElementById('trendsBtn');
-            const status = document.getElementById('status');
-            
-            btn.innerHTML = `
-                <i class="fas fa-circle-notch animate-spin mr-2"></i>
-                Getting Trends...
-            `;
-            btn.disabled = true;
-            status.innerHTML = '<i class="fas fa-sync-alt animate-spin mr-2"></i> Fetching Google Trends data...';
-
-            try {
-                // This would call your trends endpoint if available
-                await new Promise(resolve => setTimeout(resolve, 1500));
-                showToast('Trends feature coming soon! Using news data for now.');
-            } catch (error) {
-                status.innerHTML = '<i class="fas fa-exclamation-triangle text-red-400 mr-2"></i> Trends service unavailable';
-            }
-
-            btn.innerHTML = `
-                <i class="fas fa-chart-line mr-2"></i>
-                Get Trends
-            `;
-            btn.disabled = false;
-        }
-
-        function displayNews() {
-            const categories = ['general', 'politics', 'business', 'sports', 'entertainment', 'technology', 'health', 'lifestyle', 'global'];
-            const icons = [
-                'fas fa-newspaper', // General
-                'fas fa-landmark', // Politics
-                'fas fa-chart-line', // Business
-                'fas fa-basketball-ball', // Sports
-                'fas fa-film', // Entertainment
-                'fas fa-microchip', // Technology
-                'fas fa-heartbeat', // Health
-                'fas fa-heart', // Lifestyle
-                'fas fa-globe-americas' // Global
-            ];
-            
-            const colors = [
-                'text-emerald-400', // General
-                'text-red-400', // Politics
-                'text-lime-400', // Business
-                'text-orange-400', // Sports
-                'text-pink-400', // Entertainment
-                'text-purple-400', // Technology
-                'text-fuchsia-400', // Health
-                'text-cyan-400', // Lifestyle
-                'text-blue-400' // Global
-            ];
-            
-            categories.forEach((category, index) => {
-                const container = document.getElementById(category);
-                const items = newsData[category] || [];
-                const iconClass = icons[index];
-                const colorClass = colors[index];
-                
-                if (items.length === 0) {
-                    container.innerHTML = `
-                        <div class="text-center text-gray-500 py-8 text-sm">
-                            <i class="${iconClass} text-2xl mb-2 opacity-50 ${colorClass}"></i>
-                            <p>No news available</p>
-                            <p class="text-xs mt-1">Try again in a moment</p>
-                        </div>
-                    `;
-                    return;
-                }
-                
-                container.innerHTML = items.slice(0, 10).map((item, i) => {
-                    const delay = i * 0.05;
-                    const regionClass = item.region === 'kenyan' ? 'region-kenyan' : 'region-global';
-                    const regionText = item.region === 'kenyan' ? 'KE' : 'GL';
-                    
-                    return `
-                    <div class="trend-item flex items-center justify-between p-3 bg-gray-900/50 hover:bg-gray-700/50 rounded-md cursor-pointer transition-all duration-300 border border-gray-700/30" 
-                         onclick="selectNews('${item.title.replace(/'/g, "\\'")}')"
-                         style="animation-delay: ${delay}s">
-                        <div class="flex items-center flex-1 min-w-0">
-                            <div class="w-7 h-7 bg-gray-800 text-white rounded flex items-center justify-center text-sm font-medium mr-3">
-                                ${i + 1}
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <div class="flex items-center">
-                                    <span class="block text-white text-sm truncate">${item.title}</span>
-                                    <span class="region-badge ${regionClass}">${regionText}</span>
-                                </div>
-                                <span class="text-xs text-gray-500">${item.source || 'Click to copy'}</span>
-                            </div>
-                        </div>
-                        <i class="${iconClass} ${colorClass}"></i>
-                    </div>`;
-                }).join('');
-            });
-        }
-
-        function selectNews(title) {
-            navigator.clipboard.writeText(title).then(() => {
-                showToast(`Copied: "${title}"`);
-            }).catch(() => {
-                // Fallback for browsers that don't support clipboard API
-                const textArea = document.createElement('textarea');
-                textArea.value = title;
-                document.body.appendChild(textArea);
-                textArea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textArea);
-                showToast(`Selected: "${title}" (Copied)`);
-            });
-        }
-
-        function showToast(message) {
-            const toast = document.getElementById('toast');
-            const toastMessage = document.getElementById('toast-message');
-            
-            toastMessage.textContent = message;
-            toast.classList.remove('hidden');
-            
-            setTimeout(() => {
-                toast.classList.add('hidden');
-            }, 3000);
-        }
-
-        function exportCSV() {
-            if (!newsData || Object.keys(newsData).length === 0) {
-                showToast('No data to export. Please load news first.');
-                return;
-            }
-            
-            // Create a temporary link to trigger download
-            const link = document.createElement('a');
-            link.href = '/api/export';
-            link.target = '_blank';
-            link.download = 'trendscope-news.csv';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            showToast('Exporting CSV file...');
-        }
-    </script>
+    // Initial load
+    fetchAllNews();
+  </script>
 </body>
 </html>
